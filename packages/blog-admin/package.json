@@ -1,0 +1,38 @@
+{
+  "name": "@zwantum/blog-admin",
+  "version": "1.0.0",
+  "description": "Modular Blog admin components designed to plug into any existing website dashboard",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@zwantum/blog-types": "workspace:*",
+    "@zwantum/blog-core": "workspace:*",
+    "@zwantum/blog-editor": "workspace:*",
+    "@zwantum/blog-seo": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3"
+  }
+}

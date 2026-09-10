@@ -1,0 +1,336 @@
+/* ==========================================================================
+   ZwantumBlog Modular Admin Styles
+   Custom property isolation with --zw-admin-*
+   ========================================================================== */
+
+:root {
+  --zw-admin-bg: #fffdf5;
+  --zw-admin-card-bg: #ffffff;
+  --zw-admin-border: #fef08a;
+  --zw-admin-border-subtle: #fef9c3;
+  --zw-admin-text: #0f172a;
+  --zw-admin-muted: #854d0e;
+  --zw-admin-primary: #ffcc00;
+  --zw-admin-primary-hover: #e6b800;
+  --zw-admin-primary-light: #fefce8;
+  --zw-admin-primary-text: #0f172a;
+  --zw-admin-success: #166534;
+  --zw-admin-warning: #b45309;
+  --zw-admin-danger: #dc2626;
+  --zw-admin-radius: 12px;
+  --zw-admin-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.zw-admin-container {
+  font-family: var(--zw-admin-font);
+  color: var(--zw-admin-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.zw-admin-container * {
+  box-sizing: border-box;
+}
+
+/* Header & Actions Bar */
+.zw-admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.zw-admin-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--zw-admin-text);
+}
+
+.zw-admin-subtitle {
+  font-size: 0.9rem;
+  color: var(--zw-admin-muted);
+  margin-top: 4px;
+}
+
+.zw-admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.zw-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+  text-decoration: none;
+}
+
+.zw-admin-btn-primary {
+  background: var(--zw-admin-primary);
+  color: var(--zw-admin-primary-text, #0f172a);
+  font-weight: 700;
+}
+.zw-admin-btn-primary:hover {
+  background: var(--zw-admin-primary-hover);
+  color: var(--zw-admin-primary-text, #0f172a);
+}
+
+.zw-admin-btn-secondary {
+  background: #ffffff;
+  color: #78350f;
+  border-color: #fde68a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+.zw-admin-btn-secondary:hover {
+  background: #fefce8;
+  border-color: #e6b800;
+  color: #0f172a;
+}
+
+.zw-admin-btn-danger {
+  background: #fef2f2;
+  color: var(--zw-admin-danger);
+  border-color: #fecaca;
+}
+.zw-admin-btn-danger:hover {
+  background: #fee2e2;
+}
+
+.zw-admin-btn-sm {
+  padding: 4px 10px;
+  font-size: 0.775rem;
+  border-radius: 6px;
+}
+
+/* Stat Cards Grid */
+.zw-admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.zw-admin-stat-card {
+  background: var(--zw-admin-card-bg);
+  border: 1px solid var(--zw-admin-border);
+  border-top: 3px solid var(--zw-admin-primary);
+  border-radius: var(--zw-admin-radius);
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.05);
+}
+
+.zw-admin-stat-label {
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: var(--zw-admin-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.zw-admin-stat-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--zw-admin-text);
+  margin-top: 6px;
+}
+
+/* Cards */
+.zw-admin-card {
+  background: var(--zw-admin-card-bg);
+  border: 1px solid var(--zw-admin-border);
+  border-radius: var(--zw-admin-radius);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.05);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.zw-admin-card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--zw-admin-border);
+  background: var(--zw-admin-primary-light);
+  color: #78350f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.zw-admin-card-body {
+  padding: 20px;
+}
+
+/* Tables */
+.zw-admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.zw-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.zw-admin-table th {
+  padding: 12px 16px;
+  background: var(--zw-admin-primary-light);
+  color: var(--zw-admin-muted);
+  font-weight: 700;
+  border-bottom: 1px solid var(--zw-admin-border);
+}
+
+.zw-admin-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--zw-admin-border-subtle);
+  vertical-align: middle;
+}
+
+.zw-admin-table tr:hover td {
+  background: #fffdf0;
+}
+
+/* Status Badges */
+.zw-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+
+.zw-admin-badge-published { background: #dcfce7; color: #166534; }
+.zw-admin-badge-draft { background: #f1f5f9; color: #475569; }
+.zw-admin-badge-scheduled { background: #fef3c7; color: #92400e; }
+.zw-admin-badge-pending_review { background: #e0e7ff; color: #3730a3; }
+.zw-admin-badge-archived { background: #e2e8f0; color: #334155; }
+.zw-admin-badge-trash { background: #fee2e2; color: #991b1b; }
+
+/* Filter Tabs */
+.zw-admin-tabs {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--zw-admin-border);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+
+.zw-admin-tab-btn {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--zw-admin-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.zw-admin-tab-btn:hover {
+  color: var(--zw-admin-text);
+}
+
+.zw-admin-tab-btn.is-active {
+  color: var(--zw-admin-primary);
+  border-bottom-color: var(--zw-admin-primary);
+  font-weight: 600;
+}
+
+/* Form Controls */
+.zw-admin-form-group {
+  margin-bottom: 18px;
+}
+
+.zw-admin-label {
+  display: block;
+  font-size: 0.825rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--zw-admin-text);
+}
+
+.zw-admin-input,
+.zw-admin-select,
+.zw-admin-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--zw-admin-border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--zw-admin-text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.zw-admin-input:focus,
+.zw-admin-select:focus,
+.zw-admin-textarea:focus {
+  border-color: var(--zw-admin-primary);
+  box-shadow: 0 0 0 3px rgba(255, 204, 0, 0.3);
+}
+
+/* Modals */
+.zw-admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+  backdrop-filter: blur(2px);
+}
+
+.zw-admin-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  overflow: hidden;
+}
+
+.zw-admin-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--zw-admin-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.zw-admin-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.zw-admin-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--zw-admin-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f8fafc;
+}

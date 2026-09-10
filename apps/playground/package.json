@@ -1,0 +1,30 @@
+{
+  "name": "playground",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@zwantum/blog": "workspace:*",
+    "@zwantum/blog-types": "workspace:*",
+    "@zwantum/blog-core": "workspace:*",
+    "@zwantum/blog-storage": "workspace:*",
+    "@zwantum/blog-seo": "workspace:*",
+    "@zwantum/blog-editor": "workspace:*",
+    "@zwantum/blog-react": "workspace:*",
+    "@zwantum/blog-admin": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0"
+  }
+}

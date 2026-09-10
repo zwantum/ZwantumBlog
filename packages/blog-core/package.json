@@ -1,0 +1,30 @@
+{
+  "name": "@zwantum/blog-core",
+  "version": "1.0.0",
+  "description": "Framework-independent business logic and services for ZwantumBlog",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@zwantum/blog-types": "workspace:*",
+    "@zwantum/blog-storage": "workspace:*",
+    "@zwantum/blog-seo": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  }
+}

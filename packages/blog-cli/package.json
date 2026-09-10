@@ -1,0 +1,25 @@
+{
+  "name": "@zwantum/blog-cli",
+  "version": "1.0.0",
+  "description": "Interactive CLI for installing and configuring ZwantumBlog in Next.js and React applications",
+  "bin": {
+    "zwantum-blog": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "test": "vitest run",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "commander": "^13.1.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7",
+    "@types/node": "^22.13.9"
+  }
+}

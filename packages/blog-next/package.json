@@ -1,0 +1,43 @@
+{
+  "name": "@zwantum/blog-next",
+  "version": "1.0.0",
+  "description": "Next.js App Router helpers, metadata generation, and SSR-safe editor loader for ZwantumBlog",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@zwantum/blog-types": "workspace:*",
+    "@zwantum/blog-core": "workspace:*",
+    "@zwantum/blog-seo": "workspace:*",
+    "@zwantum/blog-editor": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=13.4.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.3"
+  }
+}
