@@ -1,4 +1,5 @@
 import { Post, BlogConfig } from '@zwantum/blog-types';
+import { stripHtml } from './utils';
 
 export function generateRssFeedXml(options: {
   posts: Post[];
@@ -24,17 +25,20 @@ export function generateRssFeedXml(options: {
     .map((post) => {
       const postUrl = `${siteUrl}${basePath}/${post.slug}`;
       const pubDate = post.published_at ? new Date(post.published_at).toUTCString() : new Date(post.created_at).toUTCString();
-      const authorStr = post.author?.name ? `<dc:creator><![CDATA[${post.author.name}]]></dc:creator>` : '';
-      const categories = post.categories?.map((c) => `<category><![CDATA[${c.name}]]></category>`).join('\n      ') || '';
+      const authorStr = post.author?.name ? `<dc:creator><![CDATA[${stripHtml(post.author.name)}]]></dc:creator>` : '';
+      const categories = post.categories?.map((c) => `<category><![CDATA[${stripHtml(c.name)}]]></category>`).join('\n      ') || '';
       const enclosure = post.featured_image?.url
         ? `<enclosure url="${escapeXml(post.featured_image.url)}" length="${post.featured_image.file_size || 0}" type="${post.featured_image.mime_type || 'image/jpeg'}" />`
         : '';
 
+      const cleanTitle = stripHtml(post.title);
+      const cleanExcerpt = stripHtml(post.excerpt || post.title);
+
       return `    <item>
-      <title><![CDATA[${post.title}]]></title>
+      <title><![CDATA[${cleanTitle}]]></title>
       <link>${postUrl}</link>
       <guid isPermaLink="true">${postUrl}</guid>
-      <description><![CDATA[${post.excerpt || post.title}]]></description>
+      <description><![CDATA[${cleanExcerpt}]]></description>
       <pubDate>${pubDate}</pubDate>
       ${authorStr}
       ${categories}

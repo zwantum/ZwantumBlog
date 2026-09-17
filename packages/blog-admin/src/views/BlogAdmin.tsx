@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BlogClient } from '@zwantum/blog-core';
-import { BlogSettings } from '@zwantum/blog-types';
+import { BlogSettings, Media } from '@zwantum/blog-types';
 import { BlogOverview } from './BlogOverview';
 import { PostList } from './PostList';
 import { PostEditor } from './PostEditor';
@@ -128,6 +128,10 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
   const [pendingComments, setPendingComments] = useState<number>(0);
   const [settings, setSettings] = useState<BlogSettings | null>(null);
   const [isBlogsOpen, setIsBlogsOpen] = useState<boolean>(true);
+
+  // Media Picker Modal State (for Featured Image and Content insertion)
+  const [showMediaPickerModal, setShowMediaPickerModal] = useState<boolean>(false);
+  const [mediaPickerSelectCallback, setMediaPickerSelectCallback] = useState<((media: Media) => void) | null>(null);
 
   // Load blog settings to determine active modules
   useEffect(() => {
@@ -340,6 +344,24 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
             )}
           </div>
         </nav>
+
+        {/* Sidebar Copyright */}
+        <div
+          style={{
+            padding: '16px 20px',
+            borderTop: '1px solid #f1f5f9',
+            fontSize: '11px',
+            color: '#94a3b8',
+            textAlign: 'center',
+            marginTop: 'auto',
+            background: '#ffffff',
+          }}
+        >
+          <div>© {new Date().getFullYear()} <strong>Zwantum</strong></div>
+          <div style={{ marginTop: '3px', color: '#64748b' }}>
+            Powered by <strong style={{ color: '#0f172a' }}>Zwantum</strong>
+          </div>
+        </div>
       </aside>
 
       {/* 2. MAIN WORKSPACE */}
@@ -379,6 +401,10 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
               client={client}
               onBack={() => setActiveView('posts')}
               onSaveSuccess={() => setActiveView('posts')}
+              onOpenMediaLibrary={(onSelect) => {
+                setMediaPickerSelectCallback(() => onSelect);
+                setShowMediaPickerModal(true);
+              }}
             />
           )}
 
@@ -388,6 +414,10 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
               postId={editingPostId}
               onBack={() => setActiveView('posts')}
               onSaveSuccess={() => setActiveView('posts')}
+              onOpenMediaLibrary={(onSelect) => {
+                setMediaPickerSelectCallback(() => onSelect);
+                setShowMediaPickerModal(true);
+              }}
             />
           )}
 
@@ -408,7 +438,116 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
             />
           )}
         </main>
+
+        {/* Main Workspace Copyright Footer */}
+        <footer
+          style={{
+            padding: '14px 32px',
+            borderTop: '1px solid #e2e8f0',
+            background: '#ffffff',
+            fontSize: '12px',
+            color: '#64748b',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+          }}
+        >
+          <span>© {new Date().getFullYear()} Zwantum. All rights reserved.</span>
+          <span style={{ fontWeight: 500, color: '#475569' }}>
+            Powered by <strong style={{ color: '#0f172a' }}>Zwantum</strong>
+          </span>
+        </footer>
       </div>
+
+      {/* Media Picker Modal Dialog */}
+      {showMediaPickerModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowMediaPickerModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '980px',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#ffffff',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  Media Library
+                </h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+                  Select an existing image from Supabase storage or upload a new one
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowMediaPickerModal(false)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: '#64748b',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+              <MediaLibrary
+                client={client}
+                onSelectMedia={(media) => {
+                  mediaPickerSelectCallback?.(media);
+                  setShowMediaPickerModal(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

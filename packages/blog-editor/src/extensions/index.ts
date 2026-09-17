@@ -15,6 +15,7 @@ import Youtube from '@tiptap/extension-youtube';
 import { BlogCallout } from './callout';
 import { BlogCTA } from './cta';
 import { BlogFAQ } from './faq';
+import { FontSize } from './fontSize';
 import { BlogEditorConfig } from '@zwantum/blog-types';
 
 export function getBlogEditorExtensions(config?: BlogEditorConfig) {
@@ -25,6 +26,7 @@ export function getBlogEditorExtensions(config?: BlogEditorConfig) {
       bulletList: { keepMarks: true },
       orderedList: { keepMarks: true },
     }),
+    FontSize,
     Underline,
     Highlight.configure({ multicolor: true }),
     Link.configure({
@@ -69,3 +71,4 @@ export function getBlogEditorExtensions(config?: BlogEditorConfig) {
 export * from './callout';
 export * from './cta';
 export * from './faq';
+export * from './fontSize';

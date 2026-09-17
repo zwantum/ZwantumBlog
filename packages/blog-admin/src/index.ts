@@ -11,3 +11,4 @@ export * from './views/BlogSettingsView';
 export * from './views/BlogAdmin';
 export * from './components/SEOHealthBadge';
 export * from './components/RevisionHistoryModal';
+export * from './components/UniversalMediaPicker';

@@ -134,9 +134,10 @@ export const MinimalNewsDesign: React.FC = () => {
                         <span>{post.published_at ? new Date(post.published_at).toLocaleDateString() : 'Draft'}</span>
                       </div>
 
-                      <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}>
-                        {post.title}
-                      </h3>
+                      <h3
+                        style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px', letterSpacing: '-0.01em' }}
+                        dangerouslySetInnerHTML={{ __html: post.title }}
+                      />
 
                       <p style={{ color: '#475569', fontSize: '0.9rem', lineHeight: 1.5, margin: 0 }}>
                         {post.excerpt}
@@ -165,6 +166,28 @@ export const MinimalNewsDesign: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Footer Copyright */}
+      <footer
+        style={{
+          borderTop: '1px solid #e2e8f0',
+          marginTop: '48px',
+          padding: '20px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '12px',
+          color: '#64748b',
+          fontFamily: "'Inter', sans-serif",
+          maxWidth: '1100px',
+          margin: '48px auto 0',
+        }}
+      >
+        <span>© {new Date().getFullYear()} Zwantum. All rights reserved.</span>
+        <span>
+          Powered by <strong style={{ color: '#0f172a' }}>Zwantum</strong>
+        </span>
+      </footer>
     </div>
   );
 };

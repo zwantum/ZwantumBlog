@@ -232,3 +232,24 @@ VALUES (
     'General blog module configuration'
 )
 ON CONFLICT (key) DO NOTHING;
+
+-- ============================================================================
+-- 013: Storage Bucket & RLS Policies (Supabase Storage)
+-- ============================================================================
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('media', 'media', true)
+ON CONFLICT (id) DO UPDATE SET public = true;
+
+DROP POLICY IF EXISTS "Public Media Select" ON storage.objects;
+CREATE POLICY "Public Media Select" ON storage.objects FOR SELECT USING (bucket_id = 'media');
+
+DROP POLICY IF EXISTS "Public Media Insert" ON storage.objects;
+CREATE POLICY "Public Media Insert" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'media');
+
+DROP POLICY IF EXISTS "Public Media Update" ON storage.objects;
+CREATE POLICY "Public Media Update" ON storage.objects FOR UPDATE USING (bucket_id = 'media');
+
+DROP POLICY IF EXISTS "Public Media Delete" ON storage.objects;
+CREATE POLICY "Public Media Delete" ON storage.objects FOR DELETE USING (bucket_id = 'media');
+
+ALTER TABLE IF EXISTS blog_media DISABLE ROW LEVEL SECURITY;

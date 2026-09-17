@@ -17,4 +17,5 @@ export interface BlogStorageAdapter {
   upload(file: File | Blob | Uint8Array | ArrayBuffer | any, filename: string, options?: StorageUploadOptions): Promise<StorageUploadResult>;
   delete(storagePath: string, bucket?: string): Promise<boolean>;
   getUrl(storagePath: string, bucket?: string): string;
+  getPublicUrl?(storagePath: string, bucket?: string): string;
 }

@@ -426,6 +426,25 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId, classNam
           })}
         </div>
       )}
+
+      {/* Powered by Zwantum */}
+      <div
+        style={{
+          marginTop: '24px',
+          paddingTop: '16px',
+          borderTop: '1px solid #f1f5f9',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          color: '#94a3b8',
+        }}
+      >
+        <span>© {new Date().getFullYear()} Zwantum. All rights reserved.</span>
+        <span>
+          Powered by <strong style={{ color: '#64748b' }}>Zwantum</strong>
+        </span>
+      </div>
     </section>
   );
 };

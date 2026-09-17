@@ -334,3 +334,11 @@
   gap: 10px;
   background: #f8fafc;
 }
+
+/* Rich Title Field - contentEditable placeholder */
+[data-placeholder]:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  font-weight: 400;
+}

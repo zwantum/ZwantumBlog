@@ -32,11 +32,34 @@ export interface SupabaseQueryClient {
   rpc?: (fn: string, params?: any) => Promise<any>;
 }
 
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isValidUUID(id: unknown): id is string {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
 export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
   private client: SupabaseQueryClient;
 
   constructor(client: SupabaseQueryClient) {
     this.client = client;
+  }
+
+  private async getPrimaryActiveAuthorId(): Promise<string | null> {
+    try {
+      const { data } = await this.client
+        .from('blog_authors')
+        .select('id')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (data && data.length > 0 && isValidUUID(data[0]?.id)) {
+        return data[0].id;
+      }
+    } catch {
+      // Non-fatal fallback
+    }
+    return null;
   }
 
   async getPosts(params?: PaginationParams & PostFilterInput): Promise<PaginatedResult<Post>> {
@@ -126,14 +149,33 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
 
   async createPost(input: PostCreateInput): Promise<Post> {
     const metrics = calculateContentMetrics(input.content || {});
-    const postPayload = {
+
+    // 1. Sanitize author_id: valid UUID or fallback to primary active author
+    let validAuthorId: string | null = null;
+    if (isValidUUID(input.author_id)) {
+      validAuthorId = input.author_id;
+    } else {
+      validAuthorId = await this.getPrimaryActiveAuthorId();
+    }
+
+    // 2. Sanitize featured_image_id: valid UUID or null
+    const validFeaturedImageId = isValidUUID(input.featured_image_id)
+      ? input.featured_image_id
+      : null;
+
+    // 3. Filter junction UUIDs
+    const validCategoryIds = (input.category_ids || []).filter(isValidUUID);
+    const validTagIds = (input.tag_ids || []).filter(isValidUUID);
+
+    // 4. Clean post payload: strictly table columns, zero relation leakage
+    const postPayload: Record<string, unknown> = {
       title: input.title,
       slug: input.slug,
-      excerpt: input.excerpt,
+      excerpt: input.excerpt || null,
       content: input.content || { type: 'doc', content: [] },
-      content_html: input.content_html,
-      featured_image_id: input.featured_image_id,
-      author_id: input.author_id,
+      content_html: input.content_html || null,
+      featured_image_id: validFeaturedImageId,
+      author_id: validAuthorId,
       status: input.status || 'draft',
       content_type: input.content_type || 'article',
       is_featured: input.is_featured ?? false,
@@ -141,7 +183,7 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
       word_count: metrics.wordCount,
       custom_fields: input.custom_fields || {},
       published_at: input.status === 'published' ? (input.published_at || new Date().toISOString()) : null,
-      scheduled_at: input.scheduled_at,
+      scheduled_at: input.scheduled_at || null,
     };
 
     const { data: post, error } = await this.client
@@ -153,8 +195,8 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     if (error) throw error;
 
     // Categories junction
-    if (input.category_ids && input.category_ids.length > 0) {
-      const catRows = input.category_ids.map((cid, idx) => ({
+    if (validCategoryIds.length > 0) {
+      const catRows = validCategoryIds.map((cid, idx) => ({
         post_id: post.id,
         category_id: cid,
         is_primary: idx === 0,
@@ -163,8 +205,8 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     }
 
     // Tags junction
-    if (input.tag_ids && input.tag_ids.length > 0) {
-      const tagRows = input.tag_ids.map((tid) => ({
+    if (validTagIds.length > 0) {
+      const tagRows = validTagIds.map((tid) => ({
         post_id: post.id,
         tag_id: tid,
       }));
@@ -185,10 +227,39 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
       updated_at: new Date().toISOString(),
     };
 
+    // 1. Strip all joined relation objects and auxiliary fields before Postgres mutation
+    delete updatePayload.author;
+    delete updatePayload.featured_image;
+    delete updatePayload.categories;
+    delete updatePayload.tags;
     delete updatePayload.category_ids;
     delete updatePayload.tag_ids;
     delete updatePayload.seo;
 
+    // 2. Sanitize author_id if provided
+    if ('author_id' in updatePayload) {
+      if (isValidUUID(updatePayload.author_id)) {
+        // Keep valid UUID
+      } else if (updatePayload.author_id) {
+        const fallbackAuthor = await this.getPrimaryActiveAuthorId();
+        if (fallbackAuthor) {
+          updatePayload.author_id = fallbackAuthor;
+        } else {
+          delete updatePayload.author_id;
+        }
+      } else {
+        updatePayload.author_id = null;
+      }
+    }
+
+    // 3. Sanitize featured_image_id if provided
+    if ('featured_image_id' in updatePayload) {
+      updatePayload.featured_image_id = isValidUUID(updatePayload.featured_image_id)
+        ? updatePayload.featured_image_id
+        : null;
+    }
+
+    // 4. Metrics calculation
     if (input.content) {
       const metrics = calculateContentMetrics(input.content);
       updatePayload.word_count = metrics.wordCount;
@@ -199,10 +270,11 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     if (error) throw error;
 
     // Update categories if provided
-    if (input.category_ids) {
+    if (input.category_ids !== undefined) {
+      const validCategoryIds = input.category_ids.filter(isValidUUID);
       await this.client.from('blog_post_categories').delete().eq('post_id', id);
-      if (input.category_ids.length > 0) {
-        const catRows = input.category_ids.map((cid, idx) => ({
+      if (validCategoryIds.length > 0) {
+        const catRows = validCategoryIds.map((cid, idx) => ({
           post_id: id,
           category_id: cid,
           is_primary: idx === 0,
@@ -212,10 +284,11 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     }
 
     // Update tags if provided
-    if (input.tag_ids) {
+    if (input.tag_ids !== undefined) {
+      const validTagIds = input.tag_ids.filter(isValidUUID);
       await this.client.from('blog_post_tags').delete().eq('post_id', id);
-      if (input.tag_ids.length > 0) {
-        const tagRows = input.tag_ids.map((tid) => ({
+      if (validTagIds.length > 0) {
+        const tagRows = validTagIds.map((tid) => ({
           post_id: id,
           tag_id: tid,
         }));

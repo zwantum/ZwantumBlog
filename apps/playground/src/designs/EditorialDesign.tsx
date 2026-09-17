@@ -220,9 +220,10 @@ export const EditorialDesign: React.FC = () => {
                     <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.15em', color: '#78350f', fontWeight: 700, fontFamily: "'Inter', sans-serif", marginBottom: '6px' }}>
                       {post.categories?.[0]?.name || 'Architecture'}
                     </span>
-                    <h3 style={{ fontSize: '1.35rem', lineHeight: 1.35, margin: '0 0 10px', color: '#1c1917' }}>
-                      {post.title}
-                    </h3>
+                    <h3
+                      style={{ fontSize: '1.35rem', lineHeight: 1.35, margin: '0 0 10px', color: '#1c1917' }}
+                      dangerouslySetInnerHTML={{ __html: post.title }}
+                    />
                     <p style={{ color: '#57534e', fontSize: '0.95rem', lineHeight: 1.6, margin: '0 0 14px' }}>
                       {post.excerpt}
                     </p>
@@ -236,6 +237,28 @@ export const EditorialDesign: React.FC = () => {
           </div>
         )}
       </main>
+
+      {/* Footer Copyright */}
+      <footer
+        style={{
+          borderTop: '1px solid #e7e5e4',
+          marginTop: '60px',
+          padding: '24px 32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '12px',
+          color: '#78716c',
+          fontFamily: "'Inter', sans-serif",
+          maxWidth: '1200px',
+          margin: '60px auto 0',
+        }}
+      >
+        <span>© {new Date().getFullYear()} Zwantum. All rights reserved.</span>
+        <span>
+          Powered by <strong style={{ color: '#1c1917' }}>Zwantum</strong>
+        </span>
+      </footer>
     </div>
   );
 };

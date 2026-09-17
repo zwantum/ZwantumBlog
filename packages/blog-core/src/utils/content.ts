@@ -1,3 +1,22 @@
+/**
+ * Strip HTML tags from a string and return plain text.
+ * Used to sanitize post titles for SEO <title>, slugs, and alt-text
+ * while allowing rich HTML to remain in the stored title field for display.
+ */
+export function stripHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<[^>]*>/g, '') // Remove all HTML tags
+    .replace(/&nbsp;/g, ' ') // Decode common entities
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function extractPlainTextFromTiptap(node: unknown): string {
   if (!node || typeof node !== 'object') return '';
 

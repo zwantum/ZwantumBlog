@@ -65,9 +65,8 @@ export const BlogCard: React.FC<BlogCardProps> = ({
               }
             }}
             style={{ color: '#0f172a', textDecoration: 'none' }}
-          >
-            {post.title}
-          </a>
+            dangerouslySetInnerHTML={{ __html: post.title }}
+          />
         </h3>
 
         {/* Excerpt */}

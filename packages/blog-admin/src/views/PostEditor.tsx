@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Post, PostCreateInput, PostStatus, Category, Tag, Author, Media, PostSEO } from '@zwantum/blog-types';
-import { BlogClient } from '@zwantum/blog-core';
-import { BlogEditor } from '@zwantum/blog-editor';
+import { BlogClient, stripHtml } from '@zwantum/blog-core';
+import { BlogEditor, BlogEditorHandle } from '@zwantum/blog-editor';
 import { SEOHealthBadge } from '../components/SEOHealthBadge';
 import { RevisionHistoryModal } from '../components/RevisionHistoryModal';
 
@@ -35,6 +35,10 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     type: 'doc',
     content: [{ type: 'paragraph' }],
   });
+  const [contentHtml, setContentHtml] = useState<string>('');
+  const editorRef = useRef<BlogEditorHandle>(null);
+  const contentJsonRef = useRef<Record<string, unknown>>({ type: 'doc', content: [{ type: 'paragraph' }] });
+  const contentHtmlRef = useRef<string>('');
   const [status, setStatus] = useState<PostStatus>('draft');
   const [isFeatured, setIsFeatured] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
@@ -68,6 +72,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({
       setCategories(cats);
       setTags(tgs);
       setAuthors(auths);
+      if (auths && auths.length > 0) {
+        setSelectedAuthorId((prev) => prev || auths[0].id);
+      }
     });
   }, [client]);
 
@@ -80,6 +87,10 @@ export const PostEditor: React.FC<PostEditorProps> = ({
         .then((post) => {
           if (post) {
             setTitle(post.title);
+            // Sync HTML title into contentEditable
+            if (titleEditableRef.current) {
+              titleEditableRef.current.innerHTML = post.title;
+            }
             setSlug(post.slug);
             setSlugCustomized(true);
             setExcerpt(post.excerpt || '');
@@ -87,7 +98,10 @@ export const PostEditor: React.FC<PostEditorProps> = ({
             setStatus(post.status);
             setIsFeatured(post.is_featured);
             setScheduledAt(post.scheduled_at ? post.scheduled_at.slice(0, 16) : '');
-            setSelectedAuthorId(post.author_id || '');
+            const postAuthorId = post.author_id || (post as any).author?.id;
+            if (postAuthorId) {
+              setSelectedAuthorId(postAuthorId);
+            }
             setSelectedCategoryIds(post.categories?.map((c) => c.id) || []);
             setSelectedTagIds(post.tags?.map((t) => t.id) || []);
             setFeaturedMedia(post.featured_image || null);
@@ -105,9 +119,11 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   const [copiedSlug, setCopiedSlug] = useState(false);
   const [metaTitleCustomized, setMetaTitleCustomized] = useState(false);
   const [metaDescCustomized, setMetaDescCustomized] = useState(false);
+  const [showTitlePreview, setShowTitlePreview] = useState(false);
+  const titleEditableRef = useRef<HTMLDivElement>(null);
 
   const generateSlug = (text: string) =>
-    text
+    stripHtml(text)
       .toLowerCase()
       .trim()
       .replace(/[\s\W-]+/g, '-')
@@ -128,16 +144,20 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   };
 
   // Auto-slug generation and auto-SEO title from title until user edits them manually
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setTitle(val);
+  // `title` stores the raw HTML; SEO/slug always uses stripped plain text
+  const handleTitleInput = useCallback(() => {
+    const el = titleEditableRef.current;
+    if (!el) return;
+    const html = el.innerHTML;
+    setTitle(html);
+    const plain = stripHtml(html);
     if (!slugCustomized) {
-      setSlug(generateSlug(val));
+      setSlug(generateSlug(plain));
     }
     if (!metaTitleCustomized) {
-      setSeo((prev) => ({ ...prev, meta_title: val }));
+      setSeo((prev) => ({ ...prev, meta_title: plain }));
     }
-  };
+  }, [slugCustomized, metaTitleCustomized]);
 
   // Auto-sync SEO description from excerpt or content
   const handleExcerptChange = (val: string) => {
@@ -148,8 +168,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     }
   };
 
-  const handleContentChange = (json: Record<string, unknown>) => {
+  const handleContentChange = (json: Record<string, unknown>, html?: string) => {
+    contentJsonRef.current = json;
     setContentJson(json);
+    if (html !== undefined) {
+      contentHtmlRef.current = html;
+      setContentHtml(html);
+    }
     if (!metaDescCustomized && !excerpt.trim()) {
       const extracted = extractContentText(json).slice(0, 160);
       if (extracted) {
@@ -185,7 +210,8 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   };
 
   const handleSave = async (publishNow?: boolean) => {
-    if (!title.trim()) {
+    const plainTitle = stripHtml(title);
+    if (!plainTitle.trim()) {
       alert('Article title is required');
       return;
     }
@@ -193,18 +219,22 @@ export const PostEditor: React.FC<PostEditorProps> = ({
     setSaving(true);
     try {
       const targetStatus = publishNow ? 'published' : status;
+      const flushed = editorRef.current?.flush();
+      const activeContent = flushed?.json || contentJsonRef.current || contentJson;
+      const activeHtml = flushed?.html || contentHtmlRef.current || contentHtml;
 
-      const finalMetaTitle = seo.meta_title?.trim() || title.trim();
+      const finalMetaTitle = seo.meta_title?.trim() || stripHtml(title).trim();
       const finalMetaDesc =
         seo.meta_description?.trim() ||
         excerpt.trim() ||
-        extractContentText(contentJson).slice(0, 160);
+        extractContentText(activeContent).slice(0, 160);
 
-      const payload: PostCreateInput = {
+      const payload: PostCreateInput & { featured_image?: any } = {
         title,
         slug: slug.trim() || undefined,
         excerpt: excerpt.trim() || undefined,
-        content: contentJson,
+        content: activeContent,
+        content_html: activeHtml || undefined,
         status: targetStatus,
         is_featured: isFeatured,
         scheduled_at: targetStatus === 'scheduled' && scheduledAt ? new Date(scheduledAt).toISOString() : null,
@@ -212,6 +242,7 @@ export const PostEditor: React.FC<PostEditorProps> = ({
         category_ids: selectedCategoryIds,
         tag_ids: selectedTagIds,
         featured_image_id: featuredMedia?.id || null,
+        featured_image: featuredMedia || undefined,
         seo: {
           ...seo,
           meta_title: finalMetaTitle,
@@ -237,7 +268,13 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   };
 
   const handleAutosave = async (newContent: Record<string, unknown>) => {
-    handleContentChange(newContent);
+    if (!newContent) return;
+    const isActuallyEmpty = newContent.content && Array.isArray(newContent.content) && newContent.content.length === 1 && !(newContent.content[0] as any).content;
+    if (isActuallyEmpty && contentJsonRef.current && Array.isArray((contentJsonRef.current as any).content) && (contentJsonRef.current as any).content.some((c: any) => c.content && c.content.length > 0)) {
+      return;
+    }
+    contentJsonRef.current = newContent;
+    setContentJson(newContent);
     if (postId && title.trim()) {
       await client.posts.update(postId, { content: newContent });
     }
@@ -336,24 +373,80 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {/* Live Preview Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowTitlePreview((v) => !v)}
+                  title="Toggle live preview of styled title"
+                  style={{
+                    background: showTitlePreview ? '#f0f9ff' : '#f8fafc',
+                    border: `1px solid ${showTitlePreview ? '#7dd3fc' : '#e2e8f0'}`,
+                    borderRadius: '6px',
+                    padding: '3px 10px',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    color: showTitlePreview ? '#0369a1' : '#64748b',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  {showTitlePreview ? '✕ Close Preview' : '👁 Preview'}
+                </button>
                 <span
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: title.length === 0 ? '#94a3b8' : title.length > 70 ? '#d97706' : '#16a34a',
+                    color: stripHtml(title).length === 0 ? '#94a3b8' : stripHtml(title).length > 70 ? '#d97706' : '#16a34a',
                   }}
                 >
-                  {title.length} characters {title.length > 0 && title.length <= 70 ? '• Optimal Title' : ''}
+                  {stripHtml(title).length} chars {stripHtml(title).length > 0 && stripHtml(title).length <= 70 ? '• Optimal' : ''}
                 </span>
               </div>
             </div>
 
             <div style={{ padding: '20px' }}>
-              <input
-                type="text"
-                placeholder="Enter article headline or post title..."
-                value={title}
-                onChange={handleTitleChange}
+              {/* HTML formatting hints */}
+              <div style={{ marginBottom: '8px', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>Formatting:</span>
+                {[
+                  { label: '<i>italic</i>', title: 'Italic text' },
+                  { label: '<span style="color:#e53e3e">colored</span>', title: 'Colored text' },
+                  { label: '<strong>bold</strong>', title: 'Bold text' },
+                ].map((hint) => (
+                  <button
+                    key={hint.title}
+                    type="button"
+                    title={hint.title}
+                    onClick={() => {
+                      const el = titleEditableRef.current;
+                      if (!el) return;
+                      document.execCommand('insertHTML', false, hint.label);
+                      handleTitleInput();
+                    }}
+                    style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontSize: '11.5px',
+                      cursor: 'pointer',
+                      color: '#475569',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: hint.label }}
+                  />
+                ))}
+              </div>
+
+              {/* Rich contentEditable title field */}
+              <div
+                ref={titleEditableRef}
+                contentEditable
+                suppressContentEditableWarning
+                data-placeholder="Enter article headline or post title..."
+                onInput={handleTitleInput}
+                dangerouslySetInnerHTML={title && titleEditableRef.current === null ? { __html: title } : undefined}
                 style={{
                   width: '100%',
                   fontSize: '1.5rem',
@@ -366,7 +459,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                   padding: '0 0 12px 0',
                   borderBottom: '2px solid #f1f5f9',
                   transition: 'border-color 0.2s ease',
-                  boxSizing: 'border-box',
+                  minHeight: '2.5rem',
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word',
                 }}
                 onFocus={(e) => {
                   e.currentTarget.style.borderBottomColor = '#ffcc00';
@@ -375,6 +470,34 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                   e.currentTarget.style.borderBottomColor = '#f1f5f9';
                 }}
               />
+
+              {/* Live Preview Panel */}
+              {showTitlePreview && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '14px 18px',
+                    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f9ff 100%)',
+                    border: '1px solid #bae6fd',
+                    borderRadius: '10px',
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                    👁 Live Preview — How readers will see it
+                  </div>
+                  <div
+                    style={{ fontSize: '1.5rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.35 }}
+                    dangerouslySetInnerHTML={{ __html: title || '<span style="color:#94a3b8">No title yet...</span>' }}
+                  />
+                  <div style={{ marginTop: '8px', borderTop: '1px solid #e0f2fe', paddingTop: '8px', fontSize: '11px', color: '#64748b' }}>
+                    <strong>SEO / SERP title:</strong>&nbsp;
+                    <span style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                      {stripHtml(title) || '(empty)'}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Enhanced URL Slug / Permalink Bar */}
               <div
@@ -496,19 +619,6 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                 <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
                   Article Content
                 </span>
-                <span
-                  style={{
-                    background: '#fff9db',
-                    color: '#854d0e',
-                    border: '1px solid #fef08a',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                  }}
-                >
-                  WYSIWYG & Markdown
-                </span>
               </div>
               <div style={{ fontSize: '12px', color: '#64748b' }}>
                 Use toolbar or type <kbd style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '1px 5px', fontSize: '11px' }}>/</kbd> for blocks
@@ -517,8 +627,9 @@ export const PostEditor: React.FC<PostEditorProps> = ({
 
             {/* Tiptap Rich Text Editor */}
             <BlogEditor
+              ref={editorRef}
               content={contentJson}
-              onChange={(json) => handleContentChange(json)}
+              onChange={(json: Record<string, unknown>, html: string) => handleContentChange(json, html)}
               onAutosave={handleAutosave}
               onOpenMediaLibrary={() => {
                 if (onOpenMediaLibrary) {
@@ -867,13 +978,19 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                       placeholder="Descriptive alt text for screen readers & search engines"
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
-                      onClick={() => featuredImageInputRef.current?.click()}
+                      className="zw-admin-btn zw-admin-btn-primary zw-admin-btn-sm"
+                      onClick={() => {
+                        if (onOpenMediaLibrary) {
+                          onOpenMediaLibrary((selected) => setFeaturedMedia(selected));
+                        } else {
+                          featuredImageInputRef.current?.click();
+                        }
+                      }}
                     >
-                      Change Image
+                      🖼️ Media Library
                     </button>
                     <button
                       type="button"
@@ -887,37 +1004,19 @@ export const PostEditor: React.FC<PostEditorProps> = ({
               ) : (
                 <div style={{ textAlign: 'center', padding: '18px 12px', border: '2px dashed #cbd5e1', borderRadius: '8px' }}>
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px 0' }}>No featured image set</p>
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <button
                       type="button"
                       className="zw-admin-btn zw-admin-btn-primary zw-admin-btn-sm"
-                      onClick={() => featuredImageInputRef.current?.click()}
-                    >
-                      Upload from Device
-                    </button>
-                    <button
-                      type="button"
-                      className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                       onClick={() => {
-                        const url = window.prompt('Paste image URL (or use Media Library):', 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&auto=format&fit=crop&q=80');
-                        if (url) {
-                          setFeaturedMedia({
-                            id: 'manual-img',
-                            filename: 'image.jpg',
-                            original_name: 'image.jpg',
-                            url,
-                            mime_type: 'image/jpeg',
-                            file_size: 100000,
-                            alt_text: title,
-                            storage_provider: 'external',
-                            storage_path: url,
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString(),
-                          });
+                        if (onOpenMediaLibrary) {
+                          onOpenMediaLibrary((selected) => setFeaturedMedia(selected));
+                        } else {
+                          featuredImageInputRef.current?.click();
                         }
                       }}
                     >
-                      Paste URL
+                      🖼️ Media Library
                     </button>
                   </div>
                 </div>

@@ -1,10 +1,12 @@
 import { Post, BlogConfig } from '@zwantum/blog-types';
+import { stripHtml } from './utils';
 
 export interface GeneratedMetadata {
   title: string;
   description: string;
   canonical: string;
   robots: string;
+  rssFeedUrl?: string;
   openGraph?: {
     title: string;
     description: string;
@@ -26,6 +28,7 @@ export interface GeneratedMetadata {
   };
   alternates?: {
     canonical: string;
+    types?: Record<string, string>;
   };
 }
 
@@ -38,14 +41,15 @@ export function generatePostMetadata(post: Post, config?: BlogConfig): Generated
   const postSeo = post.seo;
 
   // Title fallback: {manual_title} OR "{post.title} | {siteName}"
+  const plainTitle = stripHtml(post.title);
   const title = postSeo?.meta_title?.trim()
     ? postSeo.meta_title
-    : `${post.title} | ${siteName}`;
+    : `${plainTitle} | ${siteName}`;
 
   // Description fallback: {manual_desc} OR {post.excerpt} OR truncated post title
   const description = postSeo?.meta_description?.trim()
     ? postSeo.meta_description
-    : post.excerpt?.trim() || post.title;
+    : post.excerpt?.trim() || plainTitle;
 
   // Canonical fallback: {manual_canonical} OR generated URL
   const canonical = postSeo?.canonical_url?.trim()
@@ -62,10 +66,10 @@ export function generatePostMetadata(post: Post, config?: BlogConfig): Generated
     config?.seo?.defaultOgImage ||
     '';
 
-  const imageAlt = post.featured_image?.alt_text || post.title;
+  const imageAlt = post.featured_image?.alt_text || plainTitle;
 
   // OG Title & Description
-  const ogTitle = postSeo?.og_title?.trim() || post.title;
+  const ogTitle = postSeo?.og_title?.trim() || plainTitle;
   const ogDescription = postSeo?.og_description?.trim() || description;
 
   // Twitter Title & Description
@@ -74,11 +78,14 @@ export function generatePostMetadata(post: Post, config?: BlogConfig): Generated
   const twitterImage = postSeo?.twitter_image_url?.trim() || imageUrl;
   const twitterCard = (postSeo?.twitter_card as 'summary' | 'summary_large_image') || 'summary_large_image';
 
+  const feedUrl = siteUrl ? `${siteUrl}${basePath}/rss.xml` : `${basePath}/rss.xml`;
+
   return {
     title,
     description,
     canonical,
     robots,
+    rssFeedUrl: feedUrl,
     openGraph: {
       title: ogTitle,
       description: ogDescription,
@@ -109,8 +116,23 @@ export function generatePostMetadata(post: Post, config?: BlogConfig): Generated
     },
     alternates: {
       canonical,
+      types: {
+        'application/rss+xml': feedUrl,
+      },
     },
   };
+}
+
+/**
+ * Returns standard HTML <link rel="alternate" type="application/rss+xml" ...> tag
+ * for RSS auto-discovery in browsers and feed readers.
+ */
+export function getRssDiscoveryLinkTag(config?: BlogConfig): string {
+  const siteUrl = (config?.seo?.siteUrl || '').replace(/\/$/, '');
+  const basePath = config?.basePath || '/blog';
+  const siteName = config?.seo?.siteName || 'Blog';
+  const feedUrl = siteUrl ? `${siteUrl}${basePath}/rss.xml` : `${basePath}/rss.xml`;
+  return `<link rel="alternate" type="application/rss+xml" title="${siteName} Feed" href="${feedUrl}" />`;
 }
 
 export function generateAuthorMetadata(author: import('@zwantum/blog-types').Author, config?: BlogConfig): GeneratedMetadata {

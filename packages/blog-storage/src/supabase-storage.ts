@@ -25,9 +25,17 @@ export class SupabaseStorageAdapter implements BlogStorageAdapter {
   private client: SupabaseStorageClientLike;
   private defaultBucket: string;
 
-  constructor(config: SupabaseStorageConfig) {
-    this.client = config.client;
-    this.defaultBucket = config.defaultBucket || 'blog-media';
+  constructor(
+    clientOrConfig: SupabaseStorageClientLike | SupabaseStorageConfig,
+    options?: { defaultBucket?: string }
+  ) {
+    if ('storage' in clientOrConfig) {
+      this.client = clientOrConfig;
+      this.defaultBucket = options?.defaultBucket || 'media';
+    } else {
+      this.client = clientOrConfig.client;
+      this.defaultBucket = clientOrConfig.defaultBucket || options?.defaultBucket || 'media';
+    }
   }
 
   async upload(
@@ -87,5 +95,9 @@ export class SupabaseStorageAdapter implements BlogStorageAdapter {
     const targetBucket = bucket || this.defaultBucket;
     const { data } = this.client.storage.from(targetBucket).getPublicUrl(storagePath);
     return data.publicUrl;
+  }
+
+  getPublicUrl(storagePath: string, bucket?: string): string {
+    return this.getUrl(storagePath, bucket);
   }
 }

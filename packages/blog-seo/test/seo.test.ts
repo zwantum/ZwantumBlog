@@ -8,6 +8,7 @@ import {
   generateSitemapEntries,
   generateSitemapXml,
   generateRssFeedXml,
+  getRssDiscoveryLinkTag,
 } from '../src';
 import { Post } from '@zwantum/blog-types';
 
@@ -65,10 +66,18 @@ describe('ZwantumBlog SEO Engine', () => {
 
     expect(meta.title).toBe('Harmonious Bedroom Directions | Vastu Guide');
     expect(meta.canonical).toBe('https://vastu.com/blog/harmonious-bedroom-directions-vastu');
+    expect(meta.rssFeedUrl).toBe('https://vastu.com/blog/rss.xml');
+    expect(meta.alternates?.types?.['application/rss+xml']).toBe('https://vastu.com/blog/rss.xml');
     expect(meta.openGraph.siteName).toBe('Vastu Sanctuary');
     expect(meta.openGraph.images[0].url).toBe('https://example.com/bedroom.jpg');
     expect(meta.openGraph.images[0].alt).toBe('Symmetrical serene bedroom layout');
     expect(meta.twitter.card).toBe('summary_large_image');
+
+    const rssLink = getRssDiscoveryLinkTag({
+      basePath: '/blog',
+      seo: { siteName: 'Vastu Sanctuary', siteUrl: 'https://vastu.com' },
+    });
+    expect(rssLink).toBe('<link rel="alternate" type="application/rss+xml" title="Vastu Sanctuary Feed" href="https://vastu.com/blog/rss.xml" />');
   });
 
   it('generates valid JSON-LD schema for Article and BreadcrumbList', () => {
@@ -82,9 +91,9 @@ describe('ZwantumBlog SEO Engine', () => {
     expect((articleSchema.author as any).name).toBe('Dr. Aarav Sharma');
 
     const breadcrumbs = generateBreadcrumbSchema([
-      { name: 'Home', url: 'https://vastu.com', position: 1 },
-      { name: 'Blog', url: 'https://vastu.com/blog', position: 2 },
-      { name: 'Bedroom Directions', url: 'https://vastu.com/blog/harmonious-bedroom-directions-vastu', position: 3 },
+      { name: 'Home', url: 'https://vastu.com' },
+      { name: 'Blog', url: 'https://vastu.com/blog' },
+      { name: samplePost.title, url: 'https://vastu.com/blog/harmonious-bedroom-directions-vastu' },
     ]);
 
     expect(breadcrumbs['@type']).toBe('BreadcrumbList');
@@ -114,12 +123,21 @@ describe('ZwantumBlog SEO Engine', () => {
     expect(sitemapXml).toContain('<loc>https://vastu.com/blog/harmonious-bedroom-directions-vastu</loc>');
     expect(sitemapXml).toContain('<urlset');
 
+    const htmlPost: Post = {
+      ...samplePost,
+      title: '10 Ways to <i>Succeed</i> with <span style="color:red">Vastu</span>',
+      excerpt: 'Learn <strong>practical</strong> tips for harmony.',
+    };
+
     const rssXml = generateRssFeedXml({
-      posts: [samplePost],
+      posts: [htmlPost],
       config: { basePath: '/blog', seo: { siteUrl: 'https://vastu.com', siteName: 'Vastu Living' } },
     });
 
-    expect(rssXml).toContain('<title><![CDATA[Harmonious Bedroom Directions According to Vastu]]></title>');
+    // Titles and excerpts in RSS must strip raw HTML tags
+    expect(rssXml).toContain('<title><![CDATA[10 Ways to Succeed with Vastu]]></title>');
+    expect(rssXml).toContain('<description><![CDATA[Learn practical tips for harmony.]]></description>');
     expect(rssXml).toContain('<rss version="2.0"');
+    expect(rssXml).toContain('<atom:link href="https://vastu.com/blog/rss.xml" rel="self" type="application/rss+xml" />');
   });
 });

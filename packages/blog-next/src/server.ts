@@ -37,6 +37,7 @@ export async function getBlogMetadata(
     description: meta.description,
     alternates: {
       canonical: meta.canonical,
+      types: meta.alternates?.types,
     },
     robots: meta.robots,
     openGraph: meta.openGraph

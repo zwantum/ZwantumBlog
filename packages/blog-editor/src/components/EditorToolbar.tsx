@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Editor } from '@tiptap/react';
+import { EditorModal, ActiveDialogType } from './EditorModal';
 
 export interface EditorToolbarProps {
   editor: Editor | null;
@@ -9,15 +10,10 @@ export interface EditorToolbarProps {
 export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMediaLibrary }) => {
   if (!editor) return null;
 
+  const [activeModal, setActiveModal] = useState<ActiveDialogType>(null);
+
   const setLink = () => {
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('Enter Link URL', previousUrl);
-    if (url === null) return;
-    if (url === '') {
-      editor.chain().focus().extendMarkRange('link').unsetLink().run();
-      return;
-    }
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    setActiveModal('link');
   };
 
   const addImage = () => {
@@ -25,17 +21,11 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMedi
       onOpenMediaLibrary();
       return;
     }
-    const url = window.prompt('Enter Image URL');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
-    }
+    setActiveModal('image');
   };
 
   const addYoutube = () => {
-    const url = window.prompt('Enter YouTube Video URL');
-    if (url) {
-      editor.commands.setYoutubeVideo({ src: url });
-    }
+    setActiveModal('video');
   };
 
   const addCallout = (type: 'info' | 'warning' | 'tip' | 'success') => {
@@ -43,33 +33,147 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMedi
   };
 
   const addCTA = () => {
-    const title = window.prompt('CTA Title', 'Consult Our Specialists');
-    const buttonText = window.prompt('Button Text', 'Book Consultation');
-    const buttonUrl = window.prompt('Button URL', '#');
-    if (title) {
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'blogCTA',
-          attrs: { title, buttonText: buttonText || 'Learn More', buttonUrl: buttonUrl || '#' },
-        })
-        .run();
-    }
+    setActiveModal('cta');
   };
 
   const addFAQ = () => {
-    const question = window.prompt('FAQ Question', 'What are the main principles?');
-    const answer = window.prompt('FAQ Answer', 'The main principles center on harmony, balance, and spatial flow.');
-    if (question && answer) {
-      editor
-        .chain()
-        .focus()
-        .insertContent({
-          type: 'blogFAQ',
-          attrs: { question, answer },
-        })
-        .run();
+    setActiveModal('faq');
+  };
+
+  const getCurrentHeading = (): string => {
+    if (editor.isActive('heading', { level: 1 })) return 'h1';
+    if (editor.isActive('heading', { level: 2 })) return 'h2';
+    if (editor.isActive('heading', { level: 3 })) return 'h3';
+    if (editor.isActive('heading', { level: 4 })) return 'h4';
+    if (editor.isActive('heading', { level: 5 })) return 'h5';
+    if (editor.isActive('heading', { level: 6 })) return 'h6';
+    return 'p';
+  };
+
+  const handleHeadingChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === 'p') {
+      editor.chain().focus().setParagraph().run();
+    } else if (val.startsWith('h')) {
+      const level = parseInt(val.replace('h', ''), 10) as 1 | 2 | 3 | 4 | 5 | 6;
+      editor.chain().focus().toggleHeading({ level }).run();
+    }
+  };
+
+  const getCurrentFontSize = (): string => {
+    return (editor.getAttributes('fontSize') as any)?.size || '';
+  };
+
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const size = e.target.value;
+    if (!size) {
+      (editor.chain().focus() as any).unsetFontSize().run();
+    } else {
+      (editor.chain().focus() as any).setFontSize(size).run();
+    }
+  };
+
+  const handleToggleList = (type: 'bulletList' | 'orderedList') => {
+    const { state, view } = editor;
+    const { selection, doc } = state;
+    let from = selection.from;
+    let to = selection.to;
+
+    try {
+      const $from = selection.$from;
+      const $to = selection.$to;
+      from = Math.min(from, $from.start($from.depth));
+      to = Math.max(to, $to.end($to.depth));
+    } catch {
+      // fallback
+    }
+
+    const breakPoints: { pos: number; len: number; depth: number }[] = [];
+    doc.nodesBetween(from, to, (node, pos) => {
+      if (node.type.name === 'hardBreak') {
+        const $pos = doc.resolve(pos);
+        let depth = 1;
+        for (let d = $pos.depth; d > 0; d--) {
+          if ($pos.node(d).type.name === 'listItem') {
+            depth = $pos.depth - d + 1;
+            break;
+          }
+        }
+        breakPoints.push({ pos, len: node.nodeSize, depth });
+      } else if (node.isText && node.text && node.text.includes('\n')) {
+        const text = node.text;
+        const $pos = doc.resolve(pos);
+        let depth = 1;
+        for (let d = $pos.depth; d > 0; d--) {
+          if ($pos.node(d).type.name === 'listItem') {
+            depth = $pos.depth - d + 1;
+            break;
+          }
+        }
+        for (let i = 0; i < text.length; i++) {
+          if (text[i] === '\n') {
+            breakPoints.push({ pos: pos + i, len: 1, depth });
+          }
+        }
+      }
+    });
+
+    if (breakPoints.length > 0) {
+      breakPoints.sort((a, b) => b.pos - a.pos);
+
+      const tr = state.tr;
+      const initialFrom = from;
+      const initialTo = to;
+
+      breakPoints.forEach(({ pos, len, depth }) => {
+        tr.delete(pos, pos + len);
+        try {
+          tr.split(pos, depth);
+        } catch {
+          try {
+            tr.split(pos, 1);
+          } catch {
+            // Cannot split at position
+          }
+        }
+      });
+
+      const wasInBullet = editor.isActive('bulletList');
+      const wasInOrdered = editor.isActive('orderedList');
+
+      const newFrom = Math.max(0, tr.mapping.map(initialFrom));
+      const newTo = Math.min(tr.doc.content.size, tr.mapping.map(initialTo));
+
+      view.dispatch(tr);
+
+      const chain = editor.chain().focus();
+      try {
+        chain.setTextSelection({ from: newFrom, to: newTo });
+      } catch {
+        // fallback
+      }
+
+      if (type === 'bulletList' && wasInBullet) {
+        chain.run();
+        return;
+      }
+      if (type === 'orderedList' && wasInOrdered) {
+        chain.run();
+        return;
+      }
+
+      if (type === 'bulletList') {
+        chain.toggleBulletList().run();
+      } else {
+        chain.toggleOrderedList().run();
+      }
+      return;
+    }
+
+    if (type === 'bulletList') {
+      editor.chain().focus().toggleBulletList().run();
+    } else {
+      editor.chain().focus().toggleOrderedList().run();
     }
   };
 
@@ -99,52 +203,40 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMedi
 
       <div className="zw-blog-toolbar-divider" />
 
-      {/* Headings & Hierarchy */}
-      <div className="zw-blog-toolbar-group" title="Headings & Text Structure">
-        <button
-          type="button"
-          className={`zw-blog-toolbar-btn ${editor.isActive('paragraph') ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().setParagraph().run()}
-          title="Normal Text / Paragraph"
+      {/* Headings & Font Size in Dropdowns */}
+      <div className="zw-blog-toolbar-group" title="Text Style & Headings">
+        <select
+          className="zw-blog-toolbar-select"
+          value={getCurrentHeading()}
+          onChange={handleHeadingChange}
+          title="Heading / Text Hierarchy"
         >
-          ¶ Text
-        </button>
-        <button
-          type="button"
-          className={`zw-blog-toolbar-btn ${editor.isActive('heading', { level: 1 }) ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          title="Heading 1 (Main Section)"
-          style={{ fontWeight: 800 }}
+          <option value="p">¶ Paragraph</option>
+          <option value="h1">H1 - Heading 1</option>
+          <option value="h2">H2 - Heading 2</option>
+          <option value="h3">H3 - Heading 3</option>
+          <option value="h4">H4 - Heading 4</option>
+          <option value="h5">H5 - Heading 5</option>
+          <option value="h6">H6 - Heading 6</option>
+        </select>
+
+        <select
+          className="zw-blog-toolbar-select"
+          value={getCurrentFontSize()}
+          onChange={handleFontSizeChange}
+          title="Font Size"
         >
-          H1
-        </button>
-        <button
-          type="button"
-          className={`zw-blog-toolbar-btn ${editor.isActive('heading', { level: 2 }) ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          title="Heading 2 (Sub-section)"
-          style={{ fontWeight: 700 }}
-        >
-          H2
-        </button>
-        <button
-          type="button"
-          className={`zw-blog-toolbar-btn ${editor.isActive('heading', { level: 3 }) ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          title="Heading 3 (Sub-topic)"
-          style={{ fontWeight: 600 }}
-        >
-          H3
-        </button>
-        <button
-          type="button"
-          className={`zw-blog-toolbar-btn ${editor.isActive('heading', { level: 4 }) ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-          title="Heading 4 (Minor Heading)"
-          style={{ fontWeight: 600 }}
-        >
-          H4
-        </button>
+          <option value="">Font Size</option>
+          <option value="12px">12px (Small)</option>
+          <option value="14px">14px (Body)</option>
+          <option value="16px">16px (Base)</option>
+          <option value="18px">18px (Medium)</option>
+          <option value="20px">20px (Large)</option>
+          <option value="24px">24px (XL)</option>
+          <option value="28px">28px (2XL)</option>
+          <option value="32px">32px (3XL)</option>
+          <option value="36px">36px (4XL)</option>
+        </select>
       </div>
 
       <div className="zw-blog-toolbar-divider" />
@@ -205,22 +297,40 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMedi
 
       {/* Lists & Quotes */}
       <div className="zw-blog-toolbar-group" title="Lists & Quotes">
+        {/* Bullet List Icon */}
         <button
           type="button"
           className={`zw-blog-toolbar-btn ${editor.isActive('bulletList') ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          onClick={() => handleToggleList('bulletList')}
           title="Bullet List"
         >
-          • List
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="9" y1="6" x2="20" y2="6" />
+            <line x1="9" y1="12" x2="20" y2="12" />
+            <line x1="9" y1="18" x2="20" y2="18" />
+            <circle cx="4" cy="6" r="1.8" fill="currentColor" />
+            <circle cx="4" cy="12" r="1.8" fill="currentColor" />
+            <circle cx="4" cy="18" r="1.8" fill="currentColor" />
+          </svg>
         </button>
+
+        {/* Numbered / Ordered List Icon */}
         <button
           type="button"
           className={`zw-blog-toolbar-btn ${editor.isActive('orderedList') ? 'is-active' : ''}`}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          onClick={() => handleToggleList('orderedList')}
           title="Numbered List"
         >
-          1. List
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="10" y1="6" x2="21" y2="6" />
+            <line x1="10" y1="12" x2="21" y2="12" />
+            <line x1="10" y1="18" x2="21" y2="18" />
+            <path d="M4 6h1.5v4" />
+            <path d="M3.5 10h2.5" />
+            <path d="M3.5 14.5c.3-.5.9-.8 1.5-.8.8 0 1.5.5 1.5 1.2 0 .6-.4 1-1 1.4L3.5 18h3" />
+          </svg>
         </button>
+
         <button
           type="button"
           className={`zw-blog-toolbar-btn ${editor.isActive('blockquote') ? 'is-active' : ''}`}
@@ -327,6 +437,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor, onOpenMedi
           </>
         )}
       </div>
+
+      {/* Modern In-Editor Modal Dialogs (Link, Video, CTA, FAQ, Image) */}
+      <EditorModal
+        type={activeModal}
+        editor={editor}
+        onClose={() => setActiveModal(null)}
+      />
     </div>
   );
 };
