@@ -50,33 +50,41 @@ This idempotently creates the 12 scoped tables:
 
 ---
 
-## 💻 Step 2: Installation in Your Host Project
+## 💻 Step 2: Installation in Any Website / Project
 
-Install from your GitHub private repository or package manager:
+Install the official package from NPM:
 
 ```bash
-# Using SSH (recommended):
-npm install git+ssh://git@github.com/YOUR_USERNAME/zwantum-blog.git @supabase/supabase-js
-
-# OR using HTTPS with a GitHub Token:
-npm install git+https://<YOUR_TOKEN>@github.com/YOUR_USERNAME/zwantum-blog.git @supabase/supabase-js
+npm install @zwantum/blog @supabase/supabase-js
+# or
+pnpm add @zwantum/blog @supabase/supabase-js
+# or
+yarn add @zwantum/blog @supabase/supabase-js
 ```
+
+> [!TIP]
+> **Single Unified Package**: `@zwantum/blog` includes everything. You do not need to install any sub-packages individually. Import exactly what you need via clean subpaths:
+> * `@zwantum/blog/core` — Client, Supabase adapters, and utilities
+> * `@zwantum/blog/admin` — Full admin dashboard (`<BlogAdmin />`) & rich editor
+> * `@zwantum/blog/react` — Frontend article reader, comments, and React hooks
+> * `@zwantum/blog/next` — Next.js App Router helpers, metadata, SSR & schema
+> * `@zwantum/blog/seo` — Metadata generator, XML sitemaps, RSS 2.0 feeds
 
 ---
 
-## ⚛️ Guide 1: Integration in an Existing React Website
+## ⚛️ Guide 1: Integration in a React / Vite Website
 
 ### 1. Initialize the Blog Client
 Create a shared client file (e.g., `src/lib/blogClient.ts`):
 
 ```typescript
 import { createClient } from '@supabase/supabase-js';
-import { createBlogClient, SupabaseDatabaseAdapter } from '@zwantum/blog-core';
-import { SupabaseStorageAdapter } from '@zwantum/blog-storage';
+import { createBlogClient, SupabaseDatabaseAdapter } from '@zwantum/blog/core';
+import { SupabaseStorageAdapter } from '@zwantum/blog/storage';
 
 const supabase = createClient(
-  process.env.REACT_APP_SUPABASE_URL!,
-  process.env.REACT_APP_SUPABASE_ANON_KEY!
+  import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL!,
+  import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY!
 );
 
 export const blogClient = createBlogClient({
@@ -90,7 +98,7 @@ Drop `<BlogAdmin />` into your admin route or dashboard tab:
 
 ```tsx
 import React from 'react';
-import { BlogAdmin } from '@zwantum/blog-admin';
+import { BlogAdmin } from '@zwantum/blog/admin';
 import { blogClient } from '../lib/blogClient';
 
 export default function AdminBlogPage() {
@@ -116,7 +124,7 @@ Wrap your public blog routes with `<BlogProvider>`:
 ```tsx
 // src/pages/BlogIndex.tsx
 import React from 'react';
-import { BlogProvider, useBlogPosts } from '@zwantum/blog-react';
+import { BlogProvider, useBlogPosts } from '@zwantum/blog/react';
 import { blogClient } from '../lib/blogClient';
 
 function BlogList() {
@@ -129,7 +137,8 @@ function BlogList() {
       {posts.map((post) => (
         <a key={post.id} href={`/blog/${post.slug}`} className="blog-card">
           {post.featured_image?.url && <img src={post.featured_image.url} alt={post.title} />}
-          <h2>{post.title}</h2>
+          {/* Supports styled HTML titles (e.g. italics, colors) */}
+          <h2 dangerouslySetInnerHTML={{ __html: post.title }} />
           <p>{post.excerpt}</p>
         </a>
       ))}
@@ -150,7 +159,7 @@ export default function BlogPage() {
 ```tsx
 // src/pages/BlogPost.tsx
 import React from 'react';
-import { BlogProvider, useBlogPost, BlogContent, ShareButtons, CommentSection } from '@zwantum/blog-react';
+import { BlogProvider, useBlogPost, BlogContent, ShareButtons, CommentSection } from '@zwantum/blog/react';
 import { blogClient } from '../lib/blogClient';
 
 function ArticleView({ slug }: { slug: string }) {
@@ -161,7 +170,7 @@ function ArticleView({ slug }: { slug: string }) {
 
   return (
     <article style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 16px' }}>
-      <h1>{post.title}</h1>
+      <h1 dangerouslySetInnerHTML={{ __html: post.title }} />
       <p style={{ color: '#64748b' }}>By {post.author?.name || 'Editorial'} • {post.reading_time} min read</p>
       
       {/* Tiptap Rich Content Renderer */}
@@ -188,12 +197,12 @@ export default function BlogPostPage({ slug }: { slug: string }) {
 
 ---
 
-## ⚡ Guide 2: Integration in a New Next.js Website (App Router)
+## ⚡ Guide 2: Integration in a Next.js Website (App Router)
 
 ### 1. Initialize Client (`lib/blogClient.ts`)
 ```typescript
 import { createClient } from '@supabase/supabase-js';
-import { createBlogClient, SupabaseDatabaseAdapter } from '@zwantum/blog-core';
+import { createBlogClient, SupabaseDatabaseAdapter } from '@zwantum/blog/core';
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -207,7 +216,7 @@ export const blogClient = createBlogClient({
 
 ### 2. Public Blog Index with SSR/ISR (`app/blog/page.tsx`)
 ```tsx
-import { getPosts } from '@zwantum/blog-next';
+import { getPosts } from '@zwantum/blog/next';
 import { blogClient } from '@/lib/blogClient';
 import Link from 'next/link';
 
@@ -223,7 +232,7 @@ export default async function BlogPage() {
         {result.data.map((post) => (
           <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>{post.title}</h2>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }} dangerouslySetInnerHTML={{ __html: post.title }} />
               <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '8px' }}>{post.excerpt}</p>
             </div>
           </Link>
@@ -236,12 +245,12 @@ export default async function BlogPage() {
 
 ### 3. Server-Rendered Article with Automated SEO (`app/blog/[slug]/page.tsx`)
 ```tsx
-import { getPost, getBlogMetadata } from '@zwantum/blog-next';
-import { BlogContent, CommentSection, BlogProvider } from '@zwantum/blog-react';
+import { getPost, getBlogMetadata } from '@zwantum/blog/next';
+import { BlogContent, CommentSection, BlogProvider } from '@zwantum/blog/react';
 import { blogClient } from '@/lib/blogClient';
 import { notFound } from 'next/navigation';
 
-// 1. Automatically generates Google OpenGraph, Twitter Cards, Canonical links:
+// 1. Automatically generates Google OpenGraph, Twitter Cards, Canonical links & RSS auto-discovery:
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   return getBlogMetadata(params.slug, blogClient);
 }
@@ -254,7 +263,10 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
   return (
     <BlogProvider client={blogClient}>
       <article style={{ maxWidth: '800px', margin: '0 auto', padding: '48px 20px' }}>
-        <h1 style={{ fontSize: '2.75rem', fontWeight: 800, lineHeight: 1.2 }}>{post.title}</h1>
+        <h1 
+          style={{ fontSize: '2.75rem', fontWeight: 800, lineHeight: 1.2 }}
+          dangerouslySetInnerHTML={{ __html: post.title }}
+        />
         <p style={{ color: '#64748b', margin: '16px 0 32px' }}>
           By {post.author?.name || 'Staff'} • {post.reading_time} min read
         </p>
@@ -276,11 +288,41 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 ```tsx
 'use client';
 
-import { BlogAdmin } from '@zwantum/blog-admin';
+import { BlogAdmin } from '@zwantum/blog/admin';
 import { blogClient } from '@/lib/blogClient';
 
 export default function AdminBlogPage() {
   return <BlogAdmin client={blogClient} />;
+}
+```
+
+### 5. RSS 2.0 Auto-Syndication Endpoint (`app/blog/rss.xml/route.ts`)
+```typescript
+import { blogClient } from '@/lib/blogClient';
+
+export async function GET() {
+  const rssXml = await blogClient.seo.getRss();
+  return new Response(rssXml, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+    },
+  });
+}
+```
+
+### 6. Dynamic XML Sitemap Endpoint (`app/blog/sitemap.xml/route.ts`)
+```typescript
+import { blogClient } from '@/lib/blogClient';
+
+export async function GET() {
+  const sitemapXml = await blogClient.seo.getSitemap();
+  return new Response(sitemapXml, {
+    headers: {
+      'Content-Type': 'application/xml; charset=utf-8',
+      'Cache-Control': 'public, max-age=3600',
+    },
+  });
 }
 ```
 
