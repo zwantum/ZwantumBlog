@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PostRevision, Post } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from './Toast';
 
 export interface RevisionHistoryModalProps {
   postId: string;
@@ -47,7 +48,7 @@ export const RevisionHistoryModal: React.FC<RevisionHistoryModalProps> = ({
       onRestored(restored);
       onClose();
     } catch (err) {
-      alert(`Failed to restore: ${err}`);
+      toast.error(`Failed to restore: ${err}`, 'Restore Error');
     } finally {
       setRestoring(false);
     }
@@ -58,8 +59,16 @@ export const RevisionHistoryModal: React.FC<RevisionHistoryModalProps> = ({
       <div className="zw-admin-modal" style={{ maxWidth: '850px' }}>
         <div className="zw-admin-modal-header">
           <span>Revision History</span>
-          <button type="button" className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm" onClick={onClose}>
-            ✕
+          <button
+            type="button"
+            className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
+            onClick={onClose}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '5px' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 

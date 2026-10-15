@@ -50,6 +50,72 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
   public postCategories: Map<string, Set<string>> = new Map(); // postId -> categoryIds
   public postTags: Map<string, Set<string>> = new Map(); // postId -> tagIds
 
+  private persistKey = 'zw_memory_db_snapshot_v1';
+
+  public saveState(): void {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const snapshot = {
+        posts: Array.from(this.posts.entries()),
+        categories: Array.from(this.categories.entries()),
+        tags: Array.from(this.tags.entries()),
+        authors: Array.from(this.authors.entries()),
+        media: Array.from(this.media.entries()),
+        revisions: Array.from(this.revisions.entries()),
+        seo: Array.from(this.seo.entries()),
+        redirects: Array.from(this.redirects.entries()),
+        comments: Array.from(this.comments.entries()),
+        settings: Array.from(this.settings.entries()),
+        postCategories: Array.from(this.postCategories.entries()).map(([k, s]) => [k, Array.from(s)]),
+        postTags: Array.from(this.postTags.entries()).map(([k, s]) => [k, Array.from(s)]),
+      };
+      localStorage.setItem(this.persistKey, JSON.stringify(snapshot));
+    } catch {
+      // Ignore quota or serialization errors
+    }
+  }
+
+  public loadState(): boolean {
+    if (typeof window === 'undefined' || !window.localStorage) return false;
+    try {
+      const raw = localStorage.getItem(this.persistKey);
+      if (!raw) return false;
+      const snapshot = JSON.parse(raw);
+      if (snapshot && Array.isArray(snapshot.posts) && snapshot.posts.length > 0) {
+        this.posts = new Map(snapshot.posts);
+        this.categories = new Map(snapshot.categories || []);
+        this.tags = new Map(snapshot.tags || []);
+        this.authors = new Map(snapshot.authors || []);
+        this.media = new Map(snapshot.media || []);
+        this.revisions = new Map(snapshot.revisions || []);
+        this.seo = new Map(snapshot.seo || []);
+        this.redirects = new Map(snapshot.redirects || []);
+        this.comments = new Map(snapshot.comments || []);
+        this.settings = new Map(snapshot.settings || []);
+        if (this.settings.has('general')) {
+          const cur = this.settings.get('general');
+          if (cur) {
+            this.settings.set('general', {
+              ...cur,
+              enableTableOfContents: cur.enableTableOfContents !== false,
+              enableOgImageGenerator: cur.enableOgImageGenerator !== false,
+            });
+          }
+        }
+        this.postCategories = new Map(
+          (snapshot.postCategories || []).map(([k, arr]: [string, string[]]) => [k, new Set(arr)])
+        );
+        this.postTags = new Map(
+          (snapshot.postTags || []).map(([k, arr]: [string, string[]]) => [k, new Set(arr)])
+        );
+        return true;
+      }
+    } catch {
+      // Ignore
+    }
+    return false;
+  }
+
   constructor(seed: boolean = false) {
     this.settings.set('general', {
       blogTitle: 'Zwantum Blog',
@@ -61,11 +127,17 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       enableScheduling: true,
       enableRevisions: true,
       enableRedirects: true,
+      enableDropCap: false,
+      enableAutosave: true,
+      enableTableOfContents: true,
+      enableOgImageGenerator: true,
       timezone: 'UTC',
     });
 
-    if (seed) {
+    const hasLoaded = this.loadState();
+    if (!hasLoaded && seed) {
       this.seedData();
+      this.saveState();
     }
   }
 
@@ -198,6 +270,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       content: input.content || { type: 'doc', content: [] },
       content_html: input.content_html || null,
       featured_image_id: input.featured_image_id || null,
+      featured_image_caption: input.featured_image_caption || null,
       author_id: input.author_id || null,
       status: input.status || 'draft',
       content_type: input.content_type || 'article',
@@ -250,6 +323,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       this.seo.set(id, seo);
     }
 
+    this.saveState();
     return this.populatePostRelations(post);
   }
 
@@ -298,6 +372,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       await this.upsertPostSEO(id, input.seo);
     }
 
+    this.saveState();
     return this.populatePostRelations(updated);
   }
 
@@ -311,11 +386,13 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       this.postTags.delete(id);
       this.seo.delete(id);
       this.revisions.delete(id);
+      this.saveState();
       return true;
     } else {
       post.status = 'trash';
       post.deleted_at = new Date().toISOString();
       this.posts.set(id, post);
+      this.saveState();
       return true;
     }
   }
@@ -327,6 +404,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     post.deleted_at = null;
     post.updated_at = new Date().toISOString();
     this.posts.set(id, post);
+    this.saveState();
     return this.populatePostRelations(post);
   }
 
@@ -886,20 +964,25 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
 
   // --- SETTINGS ---
   async getSettings(key: string = 'general'): Promise<BlogSettings> {
-    return (
-      this.settings.get(key) || {
-        blogTitle: 'Blog',
-        basePath: '/blog',
-        postsPerPage: 10,
-        defaultPostStatus: 'draft',
-        enableComments: false,
-        enableMedia: true,
-        enableScheduling: true,
-        enableRevisions: true,
-        enableRedirects: true,
-        timezone: 'UTC',
-      }
-    );
+    const defaultSettings: BlogSettings = {
+      blogTitle: 'Zwantum Blog',
+      basePath: '/blog',
+      postsPerPage: 9,
+      defaultPostStatus: 'draft',
+      enableComments: true,
+      enableMedia: true,
+      enableScheduling: true,
+      enableRevisions: true,
+      enableRedirects: true,
+      enableDropCap: false,
+      enableAutosave: true,
+      enableTableOfContents: true,
+      enableOgImageGenerator: true,
+      timezone: 'UTC',
+    };
+    const stored = this.settings.get(key);
+    if (!stored) return defaultSettings;
+    return { ...defaultSettings, ...stored };
   }
 
   async updateSettings(newSettings: Partial<BlogSettings>, key: string = 'general'): Promise<BlogSettings> {
@@ -981,7 +1064,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     const now = new Date().toISOString();
 
     // Author
-    const authorId = uuid();
+    const authorId = 'author-demo-1';
     this.authors.set(authorId, {
       id: authorId,
       name: 'Dr. Aarav Sharma',
@@ -997,7 +1080,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Categories
-    const cat1Id = uuid();
+    const cat1Id = 'cat-demo-1';
     this.categories.set(cat1Id, {
       id: cat1Id,
       name: 'Architectural Vastu',
@@ -1012,7 +1095,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       updated_at: now,
     });
 
-    const cat2Id = uuid();
+    const cat2Id = 'cat-demo-2';
     this.categories.set(cat2Id, {
       id: cat2Id,
       name: 'Harmonious Living',
@@ -1028,7 +1111,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Tags
-    const tag1Id = uuid();
+    const tag1Id = 'tag-demo-1';
     this.tags.set(tag1Id, {
       id: tag1Id,
       name: 'Energy Flow',
@@ -1038,7 +1121,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       updated_at: now,
     });
 
-    const tag2Id = uuid();
+    const tag2Id = 'tag-demo-2';
     this.tags.set(tag2Id, {
       id: tag2Id,
       name: 'Interior Design',
@@ -1049,7 +1132,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Media
-    const media1Id = uuid();
+    const media1Id = 'media-demo-1';
     this.media.set(media1Id, {
       id: media1Id,
       filename: 'modern-vastu-living.jpg',
@@ -1068,7 +1151,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Post 1
-    const post1Id = uuid();
+    const post1Id = 'post-demo-1';
     const post1: Post = {
       id: post1Id,
       title: 'The Five Elements in Modern Residential Architecture',
@@ -1125,7 +1208,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     this.postTags.set(post1Id, new Set([tag1Id, tag2Id]));
 
     this.seo.set(post1Id, {
-      id: uuid(),
+      id: 'seo-demo-1',
       post_id: post1Id,
       meta_title: 'Five Elements in Modern Architecture | Spatial Harmony',
       meta_description: 'Learn how aligning the five classical elements creates peaceful, vibrant residential environments.',
@@ -1142,7 +1225,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Post 2
-    const post2Id = uuid();
+    const post2Id = 'post-demo-2';
     const post2: Post = {
       id: post2Id,
       title: 'Morning Sun and Directional Alignment for Workspace Clarity',
@@ -1185,7 +1268,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     this.postTags.set(post2Id, new Set([tag1Id]));
 
     this.seo.set(post2Id, {
-      id: uuid(),
+      id: 'seo-demo-2',
       post_id: post2Id,
       meta_title: 'Morning Sun & Workspace Directional Alignment',
       meta_description: 'Boost office focus and energy through natural light and directional alignment.',
@@ -1198,7 +1281,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
     });
 
     // Seed Real Comments
-    const comment1Id = uuid();
+    const comment1Id = 'comment-demo-1';
     this.comments.set(comment1Id, {
       id: comment1Id,
       post_id: post1Id,
@@ -1210,7 +1293,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       updated_at: new Date(Date.now() - 7200000).toISOString(),
     });
 
-    const comment2Id = uuid();
+    const comment2Id = 'comment-demo-2';
     this.comments.set(comment2Id, {
       id: comment2Id,
       post_id: post1Id,
@@ -1221,5 +1304,7 @@ export class MemoryDatabaseAdapter implements BlogDatabaseAdapter {
       created_at: new Date(Date.now() - 18000000).toISOString(),
       updated_at: new Date(Date.now() - 18000000).toISOString(),
     });
+
+    this.saveState();
   }
 }

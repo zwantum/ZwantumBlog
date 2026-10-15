@@ -12,12 +12,16 @@ CREATE TABLE IF NOT EXISTS blog_categories (
     seo_description TEXT,
     canonical_url TEXT,
     robots VARCHAR(50) DEFAULT 'index,follow',
+    no_index BOOLEAN NOT NULL DEFAULT false,
     display_order INT DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     post_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Backwards-compatible column check
+ALTER TABLE blog_categories ADD COLUMN IF NOT EXISTS no_index BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_blog_categories_slug ON blog_categories(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_categories_parent_id ON blog_categories(parent_id);

@@ -18,11 +18,32 @@ VALUES (
         "postsPerPage": 10,
         "defaultPostStatus": "draft",
         "enableComments": false,
+        "enableMedia": true,
         "enableScheduling": true,
         "enableRevisions": true,
         "enableRedirects": true,
+        "enableDropCap": false,
+        "enableAutosave": true,
+        "enableTableOfContents": true,
+        "enableOgImageGenerator": true,
         "timezone": "UTC"
     }'::jsonb,
     'General blog module configuration'
 )
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET
+    value = '{
+        "blogTitle": "Blog",
+        "basePath": "/blog",
+        "postsPerPage": 10,
+        "defaultPostStatus": "draft",
+        "enableComments": false,
+        "enableMedia": true,
+        "enableScheduling": true,
+        "enableRevisions": true,
+        "enableRedirects": true,
+        "enableDropCap": false,
+        "enableAutosave": true,
+        "enableTableOfContents": true,
+        "enableOgImageGenerator": true,
+        "timezone": "UTC"
+    }'::jsonb || blog_settings.value;

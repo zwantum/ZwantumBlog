@@ -175,6 +175,7 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
       content: input.content || { type: 'doc', content: [] },
       content_html: input.content_html || null,
       featured_image_id: validFeaturedImageId,
+      featured_image_caption: input.featured_image_caption || null,
       author_id: validAuthorId,
       status: input.status || 'draft',
       content_type: input.content_type || 'article',
@@ -788,8 +789,12 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
         enableScheduling: true,
         enableRevisions: true,
         enableRedirects: true,
+        enableDropCap: false,
+        enableAutosave: true,
+        enableTableOfContents: true,
+        enableOgImageGenerator: true,
         timezone: 'UTC',
-      };
+      } satisfies BlogSettings;
     }
     return data.value as BlogSettings;
   }

@@ -159,10 +159,11 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
               style={{
                 marginLeft: '6px',
                 fontSize: '11px',
-                padding: '1px 6px',
+                padding: '1px 7px',
                 borderRadius: '10px',
-                background: currentTab === tab ? '#0f172a' : '#f1f5f9',
-                color: currentTab === tab ? '#ffcc00' : '#64748b',
+                background: currentTab === tab ? '#fef08a' : '#f1f5f9',
+                color: currentTab === tab ? '#713f12' : '#64748b',
+                border: currentTab === tab ? '1px solid #fde047' : '1px solid transparent',
                 fontWeight: 600,
               }}
             >
@@ -196,7 +197,11 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                 ) : topLevelComments.length === 0 ? (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', padding: '48px 16px', color: '#64748b' }}>
-                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>💬</div>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: '#fef9c3', color: '#854d0e', marginBottom: '12px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                      </div>
                       <div style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>No comments found</div>
                       <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
                         {currentTab === 'all'
@@ -232,12 +237,19 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                   flexShrink: 0,
                                 }}
                               >
-                                {c.author_name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .slice(0, 2)
-                                  .join('')
-                                  .toUpperCase() || '💬'}
+                                {c.author_name ? (
+                                  c.author_name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .slice(0, 2)
+                                    .join('')
+                                    .toUpperCase()
+                                ) : (
+                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                  </svg>
+                                )}
                               </div>
                               <div>
                                 <div style={{ fontWeight: 600, fontSize: '13.5px', color: '#0f172a' }}>{c.author_name}</div>
@@ -280,10 +292,29 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                   color: '#0f172a',
                                   borderColor: isReplying ? '#eab308' : '#cbd5e1',
                                   fontWeight: 600,
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
                                 }}
                                 title="Reply to this reader comment"
                               >
-                                💬 {isReplying ? 'Close' : 'Reply'}
+                                {isReplying ? (
+                                  <>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                    <span>Close</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="9 17 4 12 9 7" />
+                                      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                                    </svg>
+                                    <span>Reply</span>
+                                  </>
+                                )}
                               </button>
 
                               {c.status !== 'approved' && (
@@ -292,8 +323,12 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                   className="zw-admin-btn zw-admin-btn-primary zw-admin-btn-sm"
                                   onClick={() => handleApprove(c.id)}
                                   title="Approve comment for public display"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
-                                  Approve
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  <span>Approve</span>
                                 </button>
                               )}
 
@@ -303,8 +338,13 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                   className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                                   onClick={() => handleSpam(c.id)}
                                   title="Flag as spam"
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                                 >
-                                  Spam
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+                                  </svg>
+                                  <span>Spam</span>
                                 </button>
                               )}
 
@@ -313,8 +353,13 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                 className="zw-admin-btn zw-admin-btn-danger zw-admin-btn-sm"
                                 onClick={() => setCommentToDelete(c.id)}
                                 title="Delete comment"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                               >
-                                Delete
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                                <span>Delete</span>
                               </button>
                             </div>
                           </td>
@@ -335,7 +380,10 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                               >
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontSize: '15px' }}>💬</span>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="9 17 4 12 9 7" />
+                                      <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                                    </svg>
                                     <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
                                       Replying to {c.author_name}
                                     </span>
@@ -404,7 +452,11 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                       gap: '6px',
                                     }}
                                   >
-                                    <span>⚠️</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                      <line x1="12" y1="9" x2="12" y2="13" />
+                                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
                                     <span>{replyError}</span>
                                   </div>
                                 )}
@@ -437,7 +489,10 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                           <tr key={r.id} style={{ background: '#fafafa', borderTop: 'none' }}>
                             <td style={{ verticalAlign: 'top', paddingTop: '12px', paddingBottom: '12px', paddingLeft: '42px' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ color: '#ca8a04', fontSize: '16px', fontWeight: 700 }}>↳</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                  <polyline points="15 10 20 15 15 20" />
+                                  <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+                                </svg>
                                 <div>
                                   <div style={{ fontWeight: 600, fontSize: '12.5px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <span>{r.author_name}</span>
@@ -481,8 +536,13 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                                 className="zw-admin-btn zw-admin-btn-danger zw-admin-btn-sm"
                                 onClick={() => setCommentToDelete(r.id)}
                                 title="Delete this reply"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                               >
-                                Delete
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                                <span>Delete</span>
                               </button>
                             </td>
                           </tr>
@@ -532,10 +592,13 @@ export const CommentManager: React.FC<CommentManagerProps> = ({ client, classNam
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '20px',
                 }}
               >
-                ⚠️
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
               </div>
               <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
                 Delete Comment?

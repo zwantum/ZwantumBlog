@@ -11,3 +11,5 @@ export * from './config';
 export * from './permissions';
 export * from './database';
 export * from './pagination';
+export * from './editor';
+export * from './backup';

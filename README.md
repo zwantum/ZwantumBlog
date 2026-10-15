@@ -5,21 +5,27 @@
 [![Next.js](https://img.shields.io/badge/Next.js-14%2B-black.svg)](https://nextjs.org/)
 [![Tiptap](https://img.shields.io/badge/Editor-Tiptap-22c55e.svg)](https://tiptap.dev/)
 [![Database](https://img.shields.io/badge/Database-PostgreSQL%2FSupabase-336791.svg)](https://supabase.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A production-ready, modular, embeddable Blog Engine designed to drop cleanly into **any existing or new website** (React, Next.js, Vite, etc.) without conflicting with host database tables or replacing your existing dashboard shell.
+A production-ready, modular, embeddable Blog Engine designed to drop cleanly into **any website** (React, Next.js, Vite, Remix, etc.) without database collisions or replacing your existing dashboard layout.
 
 ---
 
 ## 🎯 Core Architectural Principle
 
-> **ZwantumBlog owns the BLOG DOMAIN. The HOST WEBSITE owns the WEBSITE APPLICATION.**
+> **ZwantumBlog owns the BLOG DOMAIN. The HOST WEBSITE owns the APPLICATION.**
 
-* **Zero Table Collisions**: All database tables are strictly scoped with the `blog_` prefix (`blog_posts`, `blog_categories`, `blog_comments`, `blog_settings`), ensuring 100% compatibility with your existing database tables (`users`, `orders`, `profiles`, `products`).
-* **All-in-One Admin Component**: Drop `<BlogAdmin client={client} />` into your existing dashboard with **1 line of code**.
+* **Zero Table Collisions**: All database tables are strictly scoped with the `blog_` prefix (`blog_posts`, `blog_categories`, `blog_comments`, `blog_settings`, `blog_redirects`, `blog_backups`), ensuring 100% coexistence with existing host tables (`users`, `orders`, `profiles`, `products`).
+* **1-Line Admin Integration**: Drop `<BlogAdmin client={client} />` into your existing admin dashboard with a single line of code.
 * **Pluggable Architecture**:
-  * **Media**: If your host website already has its own media library/DAM, toggle off the built-in media tab or connect your existing media picker via `onOpenHostMediaPicker`.
-  * **Comments**: Toggle comments on/off globally across blog posts right inside the Blog Settings module.
-  * **SEO & Sitemaps**: Built right into the Blog Settings module (XML Sitemaps, RSS 2.0, Schema.org JSON-LD).
+  * **Media**: Toggle the built-in media library or connect your existing DAM/asset uploader via `onOpenHostMediaPicker`.
+  * **Comments**: Globally toggle comments on/off in Settings (`enableComments`).
+  * **Table of Contents**: Automatic, collapsible, sequentially numbered headings (`1.`, `2.`, `3.`) with active scroll spy.
+  * **301 URL Redirect Manager**: Automatic prompting when modifying published slugs, plus full manual redirect management.
+  * **Bulk Selection Actions**: Bulk publish, draft, trash, restore, or delete articles.
+  * **Portable Backups**: One-click JSON backup export and restore with relational integrity.
+  * **Automated Social Cards**: Dynamic Open Graph / Twitter image generator for instant branded social share cards.
+  * **SEO & Syndication**: Built-in XML Sitemaps, RSS 2.0, Schema.org JSON-LD, and Google SERP previews.
 
 ---
 
@@ -27,32 +33,32 @@ A production-ready, modular, embeddable Blog Engine designed to drop cleanly int
 
 | Package | Description |
 | :--- | :--- |
-| **`@zwantum/blog`** | Meta-package exporting everything (core, admin, react, next, seo, storage) |
-| **`@zwantum/blog-core`** | Framework-agnostic client, services, and database adapters |
+| **`@zwantum/blog`** | Meta-package exporting everything with tree-shakeable subpaths |
+| **`@zwantum/blog-core`** | Framework-agnostic client, services, and database adapters (Supabase, In-Memory) |
 | **`@zwantum/blog-admin`** | Complete admin dashboard (`<BlogAdmin />`), post editor, and moderation views |
-| **`@zwantum/blog-react`** | Public React components (`<BlogContent />`, `<CommentSection />`, `<BlogCard />`, hooks) |
-| **`@zwantum/blog-next`** | Next.js App Router helpers, automated OpenGraph `generateMetadata()`, SSR helpers |
-| **`@zwantum/blog-seo`** | Metadata generator, Schema.org JSON-LD, XML Sitemaps, RSS 2.0 |
+| **`@zwantum/blog-react`** | Public React components (`<BlogContent />`, `<TableOfContents />`, `<CommentSection />`, hooks) |
+| **`@zwantum/blog-next`** | Next.js App Router helpers, automated `generateMetadata()`, SSR & ISR helpers |
+| **`@zwantum/blog-seo`** | Metadata generator, Schema.org JSON-LD, XML Sitemaps, RSS 2.0 feeds |
 | **`@zwantum/blog-storage`**| Storage providers (Supabase Storage, Memory, S3) |
 
 ---
 
 ## 🗄️ Step 1: Database Setup (Supabase / PostgreSQL)
 
-1. Open your **Supabase Dashboard** -> **SQL Editor** -> **New query**.
-2. Open the file [`database/migrations/apply_all.sql`](database/migrations/apply_all.sql) in this repository.
-3. Paste its contents and click **Run**.
+1. Open your **Supabase Dashboard** (or any PostgreSQL interface) &rarr; **SQL Editor** &rarr; **New query**.
+2. Run the master migration script [`database/migrations/apply_all.sql`](database/migrations/apply_all.sql).
 
-This idempotently creates the 12 scoped tables:
+This idempotently sets up all 14 scoped tables and buckets:
 * `blog_authors`, `blog_media`, `blog_categories`, `blog_tags`, `blog_posts`
 * `blog_post_categories`, `blog_post_tags`, `blog_post_revisions`, `blog_post_seo`
-* `blog_redirects`, `blog_comments`, `blog_settings`
+* `blog_redirects`, `blog_comments`, `blog_settings`, `blog_backups`
+* Supabase Storage buckets: `media` (public) and `backups` (private)
 
 ---
 
-## 💻 Step 2: Installation in Any Website / Project
+## 💻 Step 2: Installation
 
-Install the official package from NPM:
+Install the unified `@zwantum/blog` package:
 
 ```bash
 npm install @zwantum/blog @supabase/supabase-js
@@ -63,10 +69,10 @@ yarn add @zwantum/blog @supabase/supabase-js
 ```
 
 > [!TIP]
-> **Single Unified Package**: `@zwantum/blog` includes everything. You do not need to install any sub-packages individually. Import exactly what you need via clean subpaths:
-> * `@zwantum/blog/core` — Client, Supabase adapters, and utilities
+> **Single Unified Package**: Import exactly what you need via clean subpaths:
+> * `@zwantum/blog/core` — Client, database adapters, and services
 > * `@zwantum/blog/admin` — Full admin dashboard (`<BlogAdmin />`) & rich editor
-> * `@zwantum/blog/react` — Frontend article reader, comments, and React hooks
+> * `@zwantum/blog/react` — Frontend article reader, Table of Contents, comments, hooks
 > * `@zwantum/blog/next` — Next.js App Router helpers, metadata, SSR & schema
 > * `@zwantum/blog/seo` — Metadata generator, XML sitemaps, RSS 2.0 feeds
 
@@ -83,18 +89,18 @@ import { createBlogClient, SupabaseDatabaseAdapter } from '@zwantum/blog/core';
 import { SupabaseStorageAdapter } from '@zwantum/blog/storage';
 
 const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL!,
-  import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY!
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
 export const blogClient = createBlogClient({
   db: new SupabaseDatabaseAdapter(supabase),
-  storage: new SupabaseStorageAdapter(supabase, { bucket: 'blog-media' }),
+  storage: new SupabaseStorageAdapter(supabase, { bucket: 'media' }),
 });
 ```
 
-### 2. Add Blog Management to Your Existing Dashboard
-Drop `<BlogAdmin />` into your admin route or dashboard tab:
+### 2. Add Blog Management to Your Admin Dashboard
+Drop `<BlogAdmin />` into your admin route or dashboard:
 
 ```tsx
 import React from 'react';
@@ -104,22 +110,18 @@ import { blogClient } from '../lib/blogClient';
 export default function AdminBlogPage() {
   return (
     <div style={{ minHeight: '100vh' }}>
-      {/* 
-        Renders complete Blogs dropdown with Overview, Posts, Categories,
-        Tags, Authors, Media, Comments, and Settings out of the box.
-      */}
       <BlogAdmin 
         client={blogClient} 
-        title="Blog"
-        subtitle="Manage articles & discussions"
+        title="Publication"
+        subtitle="Manage articles, categories, and settings"
       />
     </div>
   );
 }
 ```
 
-### 3. Display Blog Posts on Your Public React Website
-Wrap your public blog routes with `<BlogProvider>`:
+### 3. Display Blog Posts on Your Public Website
+Wrap public blog routes with `<BlogProvider>`:
 
 ```tsx
 // src/pages/BlogIndex.tsx
@@ -136,9 +138,10 @@ function BlogList() {
     <div className="blog-grid">
       {posts.map((post) => (
         <a key={post.id} href={`/blog/${post.slug}`} className="blog-card">
-          {post.featured_image?.url && <img src={post.featured_image.url} alt={post.title} />}
-          {/* Supports styled HTML titles (e.g. italics, colors) */}
-          <h2 dangerouslySetInnerHTML={{ __html: post.title }} />
+          {post.featured_image?.url && (
+            <img src={post.featured_image.url} alt={post.title} />
+          )}
+          <h2>{post.title}</h2>
           <p>{post.excerpt}</p>
         </a>
       ))}
@@ -155,32 +158,32 @@ export default function BlogPage() {
 }
 ```
 
-### 4. Public Article Reading & Interactive Comments
+### 4. Article Reader with Table of Contents & Comments
 ```tsx
 // src/pages/BlogPost.tsx
 import React from 'react';
-import { BlogProvider, useBlogPost, BlogContent, ShareButtons, CommentSection } from '@zwantum/blog/react';
+import { BlogProvider, useBlogPost, BlogContent, CommentSection } from '@zwantum/blog/react';
 import { blogClient } from '../lib/blogClient';
 
 function ArticleView({ slug }: { slug: string }) {
   const { post, loading } = useBlogPost(slug);
 
-  if (loading) return <div>Loading post...</div>;
-  if (!post) return <div>Post not found.</div>;
+  if (loading) return <div>Loading article...</div>;
+  if (!post) return <div>Article not found.</div>;
 
   return (
-    <article style={{ maxWidth: '800px', margin: '0 auto', padding: '32px 16px' }}>
-      <h1 dangerouslySetInnerHTML={{ __html: post.title }} />
-      <p style={{ color: '#64748b' }}>By {post.author?.name || 'Editorial'} • {post.reading_time} min read</p>
-      
-      {/* Tiptap Rich Content Renderer */}
-      <div style={{ margin: '24px 0' }}>
+    <article style={{ maxWidth: '820px', margin: '0 auto', padding: '32px 16px' }}>
+      <h1>{post.title}</h1>
+      <p style={{ color: '#64748b' }}>
+        By {post.author?.name || 'Editorial Staff'} • {post.reading_time} min read
+      </p>
+
+      {/* Renders content with automatic Table of Contents, editorial drop cap, and citations */}
+      <div style={{ margin: '28px 0' }}>
         <BlogContent content={post.content} />
       </div>
 
-      <ShareButtons title={post.title} />
-
-      {/* Reader Comments & Form (Automatically respects Settings -> Enable Comments toggle) */}
+      {/* Reader Discussion (respects Settings -> Enable Comments toggle) */}
       <CommentSection postId={post.id} />
     </article>
   );
@@ -197,7 +200,7 @@ export default function BlogPostPage({ slug }: { slug: string }) {
 
 ---
 
-## ⚡ Guide 2: Integration in a Next.js Website (App Router)
+## ⚡ Guide 2: Integration in Next.js (App Router)
 
 ### 1. Initialize Client (`lib/blogClient.ts`)
 ```typescript
@@ -214,26 +217,26 @@ export const blogClient = createBlogClient({
 });
 ```
 
-### 2. Public Blog Index with SSR/ISR (`app/blog/page.tsx`)
+### 2. Public Blog Index with ISR (`app/blog/page.tsx`)
 ```tsx
 import { getPosts } from '@zwantum/blog/next';
 import { blogClient } from '@/lib/blogClient';
 import Link from 'next/link';
 
-export const revalidate = 60; // Incremental Static Regeneration (1 min)
+export const revalidate = 60; // Incremental Static Regeneration
 
 export default async function BlogPage() {
   const result = await getPosts({ page: 1, limit: 12 }, blogClient);
 
   return (
     <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '48px 24px' }}>
-      <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '32px' }}>Our Blog</h1>
+      <h1 style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '32px' }}>Articles</h1>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
         {result.data.map((post) => (
-          <Link key={post.id} href={`/blog/${post.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }} dangerouslySetInnerHTML={{ __html: post.title }} />
-              <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '8px' }}>{post.excerpt}</p>
+          <Link key={post.id} href={`/blog/${post.slug}`}>
+            <div>
+              <h3>{post.title}</h3>
+              <p>{post.excerpt}</p>
             </div>
           </Link>
         ))}
@@ -250,33 +253,24 @@ import { BlogContent, CommentSection, BlogProvider } from '@zwantum/blog/react';
 import { blogClient } from '@/lib/blogClient';
 import { notFound } from 'next/navigation';
 
-// 1. Automatically generates Google OpenGraph, Twitter Cards, Canonical links & RSS auto-discovery:
+// Automated Google OpenGraph, Twitter Cards, Canonical links & RSS discovery
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   return getBlogMetadata(params.slug, blogClient);
 }
 
-// 2. Server-side article rendering:
 export default async function BlogPostPage({ params }: { params: { slug: string } }) {
   const post = await getPost(params.slug, blogClient);
   if (!post) notFound();
 
   return (
     <BlogProvider client={blogClient}>
-      <article style={{ maxWidth: '800px', margin: '0 auto', padding: '48px 20px' }}>
-        <h1 
-          style={{ fontSize: '2.75rem', fontWeight: 800, lineHeight: 1.2 }}
-          dangerouslySetInnerHTML={{ __html: post.title }}
-        />
-        <p style={{ color: '#64748b', margin: '16px 0 32px' }}>
-          By {post.author?.name || 'Staff'} • {post.reading_time} min read
-        </p>
+      <article style={{ maxWidth: '820px', margin: '0 auto', padding: '48px 20px' }}>
+        <h1>{post.title}</h1>
+        <p>By {post.author?.name || 'Staff'} • {post.reading_time} min read</p>
 
-        {/* Tiptap Article Content */}
-        <div style={{ fontSize: '1.1rem', lineHeight: 1.8 }}>
-          <BlogContent content={post.content} />
-        </div>
+        {/* Content with automatic Table of Contents and Drop Cap */}
+        <BlogContent content={post.content} />
 
-        {/* Reactive Comments & Discussion Section */}
         <CommentSection postId={post.id} />
       </article>
     </BlogProvider>
@@ -284,7 +278,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 }
 ```
 
-### 4. Next.js Admin Dashboard (`app/admin/blog/page.tsx`)
+### 4. Admin Dashboard Page (`app/admin/blog/page.tsx`)
 ```tsx
 'use client';
 
@@ -296,69 +290,100 @@ export default function AdminBlogPage() {
 }
 ```
 
-### 5. RSS 2.0 Auto-Syndication Endpoint (`app/blog/rss.xml/route.ts`)
-```typescript
-import { blogClient } from '@/lib/blogClient';
+### 5. Dynamic RSS 2.0 & Sitemap Endpoints
+* **RSS feed** (`app/blog/rss.xml/route.ts`):
+  ```typescript
+  import { blogClient } from '@/lib/blogClient';
 
-export async function GET() {
-  const rssXml = await blogClient.seo.getRss();
-  return new Response(rssXml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
-    },
-  });
-}
-```
+  export async function GET() {
+    const rss = await blogClient.seo.getRss();
+    return new Response(rss, {
+      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    });
+  }
+  ```
+* **XML Sitemap** (`app/blog/sitemap.xml/route.ts`):
+  ```typescript
+  import { blogClient } from '@/lib/blogClient';
 
-### 6. Dynamic XML Sitemap Endpoint (`app/blog/sitemap.xml/route.ts`)
-```typescript
-import { blogClient } from '@/lib/blogClient';
-
-export async function GET() {
-  const sitemapXml = await blogClient.seo.getSitemap();
-  return new Response(sitemapXml, {
-    headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600',
-    },
-  });
-}
-```
+  export async function GET() {
+    const sitemap = await blogClient.seo.getSitemap();
+    return new Response(sitemap, {
+      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+    });
+  }
+  ```
 
 ---
 
-## 🛠️ Advanced Options & Customizations
+## 🌟 Key Features & Capabilities
 
-### 1. Connecting Your Host's Existing Media Library
-If your website already has an image uploader/asset picker, pass `onOpenHostMediaPicker` to `<BlogAdmin />`:
-```tsx
-<BlogAdmin 
-  client={blogClient}
-  enableMedia={false} // Hides standalone Media tab in sidebar
-  onOpenHostMediaPicker={() => openMyWebsiteMediaModal()}
-/>
-```
+### 1. Interactive Table of Contents (TOC)
+* Headings (`H1`–`H4`) are extracted automatically from the article content.
+* Headings are sequentially numbered (`1.`, `2.`, `3.`) with smooth scrolling to heading anchors.
+* Default state is clean and collapsed with toggle controls.
+* Controlled globally via **Settings &rarr; Modules &rarr; Table of Contents**.
 
-### 2. Toggling Comments
-Inside the **Blog Settings** view (`Blogs -> Settings -> Modules & Toggles`), you can toggle **"Enable Comments on Blog Posts"** on or off at any time. When disabled:
-- The `<CommentSection />` component automatically unmounts from public article pages.
-- The **Comments** tab is automatically hidden from the admin sidebar.
+### 2. 301 URL Redirect Manager
+* **Automated Conflict Protection**: If an author changes the slug of an already-published post, an interactive confirmation modal appears on save with options:
+  - **Create 301 & Update**: Automatically inserts a 301 rule into `blog_redirects` and saves the post.
+  - **Update without Redirect**: Saves the new slug directly without adding a redirect rule.
+* **Dedicated Manager**: View, search, add custom rules, and track hit counts under **Settings &rarr; 301 Redirects**.
+
+### 3. Bulk Selection Toolbar
+* Check one, multiple, or all posts in the post list view.
+* Instant action bar displays the live selection count with one-click actions:
+  - **`✓ Publish`**: Bulk publish selected posts.
+  - **`📄 Make Draft`**: Bulk convert selected posts to draft.
+  - **`🗑 Move to Trash`**: Bulk trash selected posts.
+  - In Trash view: **`Restore Selected`** and **`Delete Permanently`**.
+  - **`Deselect All`** and table header indeterminate checkbox support.
+
+### 4. Portable Backup & Disaster Recovery
+* **Full JSON Snapshot**: Exports all articles, authors, categories, tags, media metadata, comments, redirects, and settings with relational integrity.
+* **Safe Import Modes**:
+  - **Merge**: Restores missing data and updates existing records.
+  - **Replace**: Cleanly overwrites matching records with the backup file.
+* Located under **Settings &rarr; Backup & Recovery**.
+
+### 5. Editorial Typography & Dual Editor Modes
+* **True Editorial Drop Cap**: Strictly styles the first letter of the first paragraph; automatically resets for blockquotes, bullet lists, callouts, and captions.
+* **Dual-Mode Visual / HTML Editor**: Switch seamlessly between Tiptap visual WYSIWYG and raw HTML code mode with syntax highlighting.
+* **Figure Captions**: Dedicated caption field for featured imagery.
 
 ---
 
-## 🧪 Local Testing & Monorepo Development
+## ⚙️ Blog Settings Reference
 
-To test and build within this monorepo:
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `blogTitle` | `string` | `"Blog"` | Display name of the blog publication |
+| `basePath` | `string` | `"/blog"` | URL path prefix for blog posts |
+| `postsPerPage` | `number` | `10` | Pagination limit on frontend and admin |
+| `defaultPostStatus` | `string` | `"draft"` | Default status for newly created articles |
+| `enableComments` | `boolean` | `false` | Master toggle for reader discussion sections |
+| `enableMedia` | `boolean` | `true` | Toggle built-in media manager vs host DAM |
+| `enableScheduling`| `boolean` | `true` | Scheduled publishing support |
+| `enableRevisions` | `boolean` | `true` | Historical post snapshots and revision rollback |
+| `enableRedirects` | `boolean` | `true` | Automatic 301 URL redirect management |
+| `enableDropCap` | `boolean` | `false` | Editorial first-letter drop cap on articles |
+| `enableAutosave` | `boolean` | `true` | Automatic local recovery and draft autosaving |
+| `enableTableOfContents` | `boolean` | `true` | Automatic article table of contents |
+| `enableOgImageGenerator` | `boolean` | `true` | Automated social share card generator |
+| `timezone` | `string` | `"UTC"` | Publication scheduling timezone |
+
+---
+
+## 🧪 Local Testing & Playground
 
 ```bash
 # Run unit tests across all packages
 pnpm test
 
-# Build all packages
+# Build all monorepo packages
 pnpm build
 
-# Start interactive playground showcase (Dashboard + 2 design variations)
+# Start interactive playground showcase (Admin dashboard + live frontend)
 pnpm --filter playground dev
 ```
 

@@ -130,6 +130,9 @@ importers:
       '@zwantum/blog-editor':
         specifier: workspace:*
         version: link:../blog-editor
+      '@zwantum/blog-react':
+        specifier: workspace:*
+        version: link:../blog-react
       '@zwantum/blog-seo':
         specifier: workspace:*
         version: link:../blog-seo

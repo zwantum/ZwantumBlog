@@ -1,0 +1,240 @@
+/**
+ * @zwantum/blog-react - Standalone Typography & Content Stylesheet
+ * Scoped under `.zw-blog-content` and `.blog-content` to preserve rich article formatting.
+ */
+
+.zw-blog-content,
+.blog-content,
+.zw-blog-prose {
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  word-break: break-word;
+  counter-reset: blog-citation-num;
+}
+
+/* Headings */
+.zw-blog-content h1, .blog-content h1,
+.zw-blog-content h2, .blog-content h2,
+.zw-blog-content h3, .blog-content h3,
+.zw-blog-content h4, .blog-content h4,
+.zw-blog-content h5, .blog-content h5,
+.zw-blog-content h6, .blog-content h6 {
+  color: #0f172a;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 2rem;
+  margin-bottom: 0.85rem;
+  letter-spacing: -0.02em;
+}
+
+.zw-blog-content h1, .blog-content h1 { font-size: 2.25rem; line-height: 1.2; }
+.zw-blog-content h2, .blog-content h2 { font-size: 1.75rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.5rem; }
+.zw-blog-content h3, .blog-content h3 { font-size: 1.375rem; }
+.zw-blog-content h4, .blog-content h4 { font-size: 1.15rem; }
+.zw-blog-content h5, .blog-content h5 { font-size: 1rem; }
+.zw-blog-content h6, .blog-content h6 { font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+
+/* Paragraphs */
+.zw-blog-content p, .blog-content p {
+  margin-top: 0;
+  margin-bottom: 1.35rem;
+  line-height: 1.8;
+}
+
+/* Blockquotes */
+.zw-blog-content blockquote, .blog-content blockquote {
+  margin: 1.75rem 0;
+  padding: 1rem 1.5rem;
+  border-left: 4px solid #ffcc00;
+  background-color: #fffdf5;
+  border-radius: 0 8px 8px 0;
+  font-style: italic;
+  color: #334155;
+}
+
+/* Lists */
+.zw-blog-content ul, .blog-content ul {
+  list-style-type: disc !important;
+  margin-top: 0.75rem;
+  margin-bottom: 1.35rem;
+  padding-left: 1.75rem !important;
+}
+
+.zw-blog-content ol, .blog-content ol {
+  list-style-type: decimal !important;
+  margin-top: 0.75rem;
+  margin-bottom: 1.35rem;
+  padding-left: 1.75rem !important;
+}
+
+.zw-blog-content li, .blog-content li {
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.7;
+}
+
+/* Figures & Captions */
+.blog-figure,
+.zw-blog-content figure,
+.blog-content figure {
+  margin: 2rem auto;
+  display: block;
+  max-width: 100%;
+}
+
+.blog-figure img,
+.zw-blog-content figure img,
+.blog-content figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.blog-figcaption,
+.zw-blog-content figcaption,
+.blog-content figcaption,
+.blog-featured-image-caption {
+  font-size: 0.875rem;
+  color: #64748b;
+  text-align: center;
+  margin-top: 0.65rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Universal Reference Citation System with CSS Counter */
+.blog-citation {
+  counter-increment: blog-citation-num;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+  vertical-align: 0.15em;
+  line-height: 1.25;
+  margin: 0 3px;
+  padding: 1px 7px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.blog-citation::before {
+  content: "[" counter(blog-citation-num) "]";
+  font-weight: 700;
+  color: #2563eb;
+  pointer-events: none;
+}
+
+.blog-citation:hover {
+  background-color: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e40af;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Horizontal Rules */
+.zw-blog-content hr,
+.blog-content hr {
+  border: none !important;
+  border-top: 1px solid #cbd5e1 !important;
+  height: 0 !important;
+  margin: 2.2rem 0 !important;
+  clear: both !important;
+}
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+.zw-blog-table-wrap {
+  overflow-x: auto;
+  margin: 1.8rem 0;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+}
+
+.zw-blog-content table,
+.blog-content table,
+.zw-blog-table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.95rem;
+}
+
+.zw-blog-content th,
+.blog-content th,
+.zw-blog-table-wrap th,
+.zw-blog-content td,
+.blog-content td,
+.zw-blog-table-wrap td {
+  padding: 12px 16px;
+  border: 1px solid #cbd5e1;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.zw-blog-content th,
+.blog-content th,
+.zw-blog-table-wrap th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.zw-blog-content tr:nth-child(even) td,
+.blog-content tr:nth-child(even) td,
+.zw-blog-table-wrap tr:nth-child(even) td {
+  background-color: #fbfcfd;
+}
+
+/* Editorial Drop Cap - strictly only the first top-level paragraph of the article */
+.zw-blog-content.has-drop-cap > p:first-of-type::first-letter,
+.blog-content.has-drop-cap > p:first-of-type::first-letter,
+.has-drop-cap > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.5rem;
+  line-height: 0.82;
+  margin-right: 0.12em;
+  margin-top: 0.08em;
+  font-weight: 700;
+  font-family: 'Cinzel', 'Merriweather', Georgia, serif;
+  color: inherit;
+}
+
+/* Strictly prevent drop caps on nested elements: blockquotes, lists, callouts, tables, figures, headers */
+.zw-blog-content blockquote p::first-letter,
+.blog-content blockquote p::first-letter,
+.zw-blog-content li p::first-letter,
+.blog-content li p::first-letter,
+.zw-blog-content ul p::first-letter,
+.blog-content ul p::first-letter,
+.zw-blog-content ol p::first-letter,
+.blog-content ol p::first-letter,
+.zw-blog-content table p::first-letter,
+.blog-content table p::first-letter,
+.zw-blog-content figcaption p::first-letter,
+.blog-content figcaption p::first-letter,
+.zw-blog-content aside p::first-letter,
+.blog-content aside p::first-letter,
+.zw-blog-content .callout p::first-letter,
+.blog-content .callout p::first-letter {
+  float: none !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  font-weight: inherit !important;
+  font-family: inherit !important;
+}
+

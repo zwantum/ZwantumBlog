@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Tag, TagInput } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface TagManagerProps {
   client: BlogClient;
   className?: string;
+  siteUrl?: string;
+  basePath?: string;
 }
 
 const slugify = (str: string) =>
@@ -15,7 +18,8 @@ const slugify = (str: string) =>
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }) => {
+export const TagManager: React.FC<TagManagerProps> = ({ client, className = '', siteUrl, basePath }) => {
+  const liveOrigin = siteUrl || (typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://zwantum.com');
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,8 +105,9 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
       await client.tags.create(input);
       resetCreateForm();
       fetchTags();
+      toast.success('Tag created successfully.', 'Tag Created');
     } catch (err) {
-      alert(`Error creating tag: ${err}`);
+      toast.error(`Error creating tag: ${err}`, 'Create Error');
     }
   };
 
@@ -148,8 +153,9 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
       await client.tags.update(editingTag.id, input);
       closeEditModal();
       fetchTags();
+      toast.success('Tag updated successfully.', 'Tag Updated');
     } catch (err) {
-      alert(`Error updating tag: ${err}`);
+      toast.error(`Error updating tag: ${err}`, 'Update Error');
     }
   };
 
@@ -161,8 +167,9 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
         closeEditModal();
       }
       fetchTags();
+      toast.success('Tag deleted successfully.', 'Tag Deleted');
     } catch (err) {
-      alert(`Error: ${err}`);
+      toast.error(`Error: ${err}`, 'Delete Error');
     }
   };
 
@@ -470,7 +477,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                     Google SERP Preview (Eligible to Rank)
                   </div>
                   <div style={{ fontSize: '11px', color: '#202124', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    https://example.com › blog › tag › {tagSlug || slugify(tagName) || 'topic'}
+                    {liveOrigin} › blog › tag › {tagSlug || slugify(tagName) || 'topic'}
                   </div>
                   <div
                     style={{
@@ -648,7 +655,6 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
                                 padding: '3px 8px',
                                 borderRadius: '12px',
                                 background: '#dcfce7',
@@ -657,7 +663,6 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                                 fontWeight: 600,
                               }}
                             >
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a' }} />
                               Indexable
                             </span>
                           ) : (
@@ -665,7 +670,6 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                               style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '4px',
                                 padding: '3px 8px',
                                 borderRadius: '12px',
                                 background: '#fef3c7',
@@ -674,7 +678,6 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                                 fontWeight: 600,
                               }}
                             >
-                              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#d97706' }} />
                               Noindex
                             </span>
                           )}
@@ -1073,7 +1076,7 @@ export const TagManager: React.FC<TagManagerProps> = ({ client, className = '' }
                         Google SERP Preview (Eligible to Rank)
                       </div>
                       <div style={{ fontSize: '11px', color: '#202124', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        https://example.com › blog › tag › {editSlug || slugify(editName) || 'topic'}
+                        {liveOrigin} › blog › tag › {editSlug || slugify(editName) || 'topic'}
                       </div>
                       <div
                         style={{

@@ -11,6 +11,7 @@ export * from './services/publishing-service';
 export * from './services/revision-service';
 export * from './services/comment-service';
 export * from './services/settings-service';
+export * from './services/backup-service';
 export * from './services/permission-service';
 export * from './database/memory-adapter';
 export * from './database/supabase-adapter';

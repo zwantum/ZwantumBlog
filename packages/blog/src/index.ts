@@ -5,3 +5,5 @@ export * from '@zwantum/blog-seo';
 export * from '@zwantum/blog-editor';
 export * from '@zwantum/blog-react';
 export * from '@zwantum/blog-admin';
+export type { BlogEditorHandle } from '@zwantum/blog-types';
+export { TagInput } from '@zwantum/blog-admin';

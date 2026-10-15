@@ -23,6 +23,7 @@ export interface Post {
   content_html?: string | null;
   featured_image_id?: string | null;
   featured_image?: Media | null;
+  featured_image_caption?: string | null;
   author_id?: string | null;
   author?: Author | null;
   status: PostStatus;
@@ -50,6 +51,7 @@ export interface PostCreateInput {
   content?: Record<string, unknown>;
   content_html?: string | null;
   featured_image_id?: string | null;
+  featured_image_caption?: string | null;
   author_id?: string | null;
   status?: PostStatus;
   content_type?: ContentType;

@@ -12,6 +12,9 @@ import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
 import Youtube from '@tiptap/extension-youtube';
 
+import { BlogImage } from './image';
+import { BlogCitation } from './citation';
+import { PreserveStyleAndClass } from './preserveStyleAndClass';
 import { BlogCallout } from './callout';
 import { BlogCTA } from './cta';
 import { BlogFAQ } from './faq';
@@ -36,13 +39,15 @@ export function getBlogEditorExtensions(config?: BlogEditorConfig) {
         target: '_blank',
       },
     }),
-    Image.configure({
-      inline: true,
+    BlogCitation,
+    BlogImage.configure({
+      inline: false,
       allowBase64: true,
       HTMLAttributes: {
         class: 'zw-blog-editor-image',
       },
     }),
+    PreserveStyleAndClass,
     Table.configure({
       resizable: true,
     }),
@@ -72,3 +77,6 @@ export * from './callout';
 export * from './cta';
 export * from './faq';
 export * from './fontSize';
+export * from './citation';
+export * from './image';
+export * from './preserveStyleAndClass';

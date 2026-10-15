@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Post, PostStatus, Category, Author } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface PostListProps {
   client: BlogClient;
@@ -29,6 +30,7 @@ export const PostList: React.FC<PostListProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   // Real Database Tab Counts
   const [tabCounts, setTabCounts] = useState({
@@ -188,8 +190,9 @@ export const PostList: React.FC<PostListProps> = ({
       await client.posts.duplicate(id);
       fetchPosts();
       fetchTabCounts();
+      toast.success('Post duplicated successfully.', 'Post Duplicated');
     } catch (err) {
-      alert(`Failed to duplicate: ${err}`);
+      toast.error(`Failed to duplicate: ${err}`, 'Duplicate Error');
     }
   };
 
@@ -216,13 +219,19 @@ export const PostList: React.FC<PostListProps> = ({
   // Execute confirmed action
   const executeConfirmAction = async () => {
     if (!confirmModal) return;
+    const isPerm = confirmModal.isPermanent;
     try {
       await client.posts.delete(confirmModal.postId, confirmModal.isPermanent);
       setConfirmModal(null);
       fetchPosts();
       fetchTabCounts();
+      if (isPerm) {
+        toast.success('Post permanently deleted.', 'Deleted');
+      } else {
+        toast.info('Post moved to trash.', 'Moved to Trash');
+      }
     } catch (err) {
-      alert(`Failed to delete post: ${err}`);
+      toast.error(`Failed to delete post: ${err}`, 'Delete Error');
     }
   };
 
@@ -231,8 +240,9 @@ export const PostList: React.FC<PostListProps> = ({
       await client.posts.restore(id);
       fetchPosts();
       fetchTabCounts();
+      toast.success('Post restored from trash.', 'Restored');
     } catch (err) {
-      alert(`Failed to restore post: ${err}`);
+      toast.error(`Failed to restore post: ${err}`, 'Restore Error');
     }
   };
 
@@ -263,6 +273,102 @@ export const PostList: React.FC<PostListProps> = ({
       }
       return next;
     });
+  };
+
+  const handleBulkPublish = async () => {
+    if (selectedPosts.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedPosts).map((id) => client.posts.update(id, { status: 'published' }))
+      );
+      toast.success(`${selectedPosts.size} posts published successfully!`, 'Bulk Update');
+      setSelectedPosts(new Set());
+      fetchPosts();
+      fetchTabCounts();
+    } catch (err) {
+      toast.error(`Failed to publish selected posts: ${err}`, 'Bulk Update Failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkDraft = async () => {
+    if (selectedPosts.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedPosts).map((id) => client.posts.update(id, { status: 'draft' }))
+      );
+      toast.info(`${selectedPosts.size} posts moved to drafts.`, 'Bulk Update');
+      setSelectedPosts(new Set());
+      fetchPosts();
+      fetchTabCounts();
+    } catch (err) {
+      toast.error(`Failed to update selected posts: ${err}`, 'Bulk Update Failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkTrash = async () => {
+    if (selectedPosts.size === 0) return;
+    if (!window.confirm(`Move ${selectedPosts.size} selected posts to trash?`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedPosts).map((id) => client.posts.delete(id, false))
+      );
+      toast.info(`${selectedPosts.size} posts moved to trash.`, 'Moved to Trash');
+      setSelectedPosts(new Set());
+      fetchPosts();
+      fetchTabCounts();
+    } catch (err) {
+      toast.error(`Failed to trash selected posts: ${err}`, 'Bulk Trash Failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkRestore = async () => {
+    if (selectedPosts.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedPosts).map((id) => client.posts.restore(id))
+      );
+      toast.success(`${selectedPosts.size} posts restored from trash!`, 'Restored');
+      setSelectedPosts(new Set());
+      fetchPosts();
+      fetchTabCounts();
+    } catch (err) {
+      toast.error(`Failed to restore selected posts: ${err}`, 'Bulk Restore Failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkPermanentDelete = async () => {
+    if (selectedPosts.size === 0) return;
+    if (!window.confirm(`Permanently delete ${selectedPosts.size} selected posts? This action cannot be undone.`)) return;
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedPosts).map((id) => client.posts.delete(id, true))
+      );
+      toast.success(`${selectedPosts.size} posts permanently deleted.`, 'Deleted');
+      setSelectedPosts(new Set());
+      fetchPosts();
+      fetchTabCounts();
+    } catch (err) {
+      toast.error(`Failed to permanently delete posts: ${err}`, 'Delete Failed');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedPosts(new Set());
   };
 
   // Dynamic real tab definitions
@@ -627,6 +733,215 @@ export const PostList: React.FC<PostListProps> = ({
         </button>
       </div>
 
+      {/* Bulk Action Bar (Appears when posts are selected) */}
+      {selectedPosts.size > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '12px 18px',
+            marginBottom: '16px',
+            borderRadius: '12px',
+            background: '#fffdf0',
+            border: '1px solid #ffcc00',
+            boxShadow: '0 4px 14px rgba(255, 204, 0, 0.15)',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {/* Left: Selected count */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                background: '#ffcc00',
+                color: '#0f172a',
+                fontWeight: 700,
+                borderRadius: '999px',
+                padding: '2px 9px',
+                fontSize: '12px',
+                lineHeight: '18px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {selectedPosts.size}
+            </span>
+            <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>
+              {selectedPosts.size === 1 ? 'post selected' : 'posts selected'}
+            </span>
+          </div>
+
+          {/* Right: Bulk action buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            {currentTab !== 'trash' ? (
+              <>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={handleBulkPublish}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0',
+                    background: '#f0fdf4',
+                    color: '#16a34a',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>Publish</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={handleBulkDraft}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #fef3c7',
+                    background: '#fffbeb',
+                    color: '#b45309',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                  <span>Make Draft</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={handleBulkTrash}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  </svg>
+                  <span>Move to Trash</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={handleBulkRestore}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #bbf7d0',
+                    background: '#f0fdf4',
+                    color: '#16a34a',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="1 4 1 10 7 10" />
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                  </svg>
+                  <span>Restore Selected</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={bulkLoading}
+                  onClick={handleBulkPermanentDelete}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#dc2626',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: bulkLoading ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <line x1="10" y1="11" x2="10" y2="17" />
+                    <line x1="14" y1="11" x2="14" y2="17" />
+                  </svg>
+                  <span>Delete Permanently</span>
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              disabled={bulkLoading}
+              onClick={handleDeselectAll}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 14px',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                background: '#ffffff',
+                color: '#64748b',
+                fontSize: '12.5px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>Deselect All</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 4. Posts Data Table Card */}
       <div
         style={{
@@ -645,16 +960,19 @@ export const PostList: React.FC<PostListProps> = ({
                   <input
                     type="checkbox"
                     onChange={handleSelectAll}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedPosts.size > 0 && selectedPosts.size < posts.length;
+                    }}
                     checked={posts.length > 0 && selectedPosts.size === posts.length}
                     style={{ cursor: 'pointer', borderRadius: '4px', accentColor: '#ffcc00' }}
                   />
                 </th>
-                <th style={{ padding: '14px 16px', fontWeight: 600 }}>Post</th>
-                <th style={{ padding: '14px 16px', fontWeight: 600 }}>Category</th>
-                <th style={{ padding: '14px 16px', fontWeight: 600 }}>Author</th>
-                <th style={{ padding: '14px 16px', fontWeight: 600 }}>Status</th>
-                <th style={{ padding: '14px 16px', fontWeight: 600 }}>Date ↓</th>
-                <th style={{ padding: '14px 16px', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500 }}>Post</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500 }}>Category</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500 }}>Author</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500 }}>Status</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500 }}>Date ↓</th>
+                <th style={{ padding: '14px 16px', fontWeight: 500, textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -722,8 +1040,8 @@ export const PostList: React.FC<PostListProps> = ({
                             <div
                               onClick={() => onNavigateToEditPost && onNavigateToEditPost(post.id)}
                               style={{
-                                fontWeight: 600,
-                                color: '#0f172a',
+                                fontWeight: 500,
+                                color: '#1e293b',
                                 fontSize: '13.5px',
                                 cursor: 'pointer',
                                 lineHeight: 1.35,

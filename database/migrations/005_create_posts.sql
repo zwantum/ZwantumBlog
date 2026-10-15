@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     content JSONB NOT NULL DEFAULT '{"type":"doc","content":[]}'::jsonb,
     content_html TEXT,
     featured_image_id UUID REFERENCES blog_media(id) ON DELETE SET NULL,
+    featured_image_caption TEXT,
     author_id UUID REFERENCES blog_authors(id) ON DELETE SET NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'pending_review', 'scheduled', 'published', 'archived', 'trash')),
     content_type VARCHAR(50) NOT NULL DEFAULT 'article',
@@ -22,6 +23,10 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Safe backwards-compatible columns check for existing databases
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS content_html TEXT;
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS featured_image_caption TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);

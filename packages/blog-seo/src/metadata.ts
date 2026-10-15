@@ -1,5 +1,6 @@
 import { Post, BlogConfig } from '@zwantum/blog-types';
 import { stripHtml } from './utils';
+import { getPostOgImage } from './og-image';
 
 export interface GeneratedMetadata {
   title: string;
@@ -59,12 +60,13 @@ export function generatePostMetadata(post: Post, config?: BlogConfig): Generated
   // Robots fallback
   const robots = postSeo?.robots || 'index,follow';
 
-  // Images fallback: SEO OG image OR post featured image OR default OG image
+  // Images fallback: SEO OG image OR post featured image OR default OG image OR auto-generated branded card
+  const shouldAutoGenerate = config?.features?.ogImageGenerator !== false;
   const imageUrl =
     postSeo?.og_image_url ||
     post.featured_image?.url ||
     config?.seo?.defaultOgImage ||
-    '';
+    (shouldAutoGenerate ? getPostOgImage(post, config) : '');
 
   const imageAlt = post.featured_image?.alt_text || plainTitle;
 

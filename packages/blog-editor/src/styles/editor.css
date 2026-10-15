@@ -72,7 +72,7 @@
   height: 32px;
   padding: 4px 8px;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 500;
   color: #475569;
   background: transparent;
   border: 1px solid transparent;
@@ -96,7 +96,7 @@
 .zw-blog-toolbar-btn.is-active {
   background: var(--zw-editor-active-bg);
   color: var(--zw-editor-active-text);
-  font-weight: 700;
+  font-weight: 600;
   border-color: #eab308;
   box-shadow: 0 2px 5px rgba(234, 179, 8, 0.3);
 }
@@ -105,7 +105,7 @@
   height: 32px;
   padding: 0 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: #334155;
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -177,6 +177,17 @@
   overflow-x: auto;
   font-family: monospace;
   font-size: 0.9em;
+}
+
+/* Horizontal Divider Rule (Single crisp line, prevents browser 3D double-line) */
+.zw-blog-editor-content hr,
+.tiptap hr,
+.ProseMirror hr {
+  border: none !important;
+  border-top: 1px solid #cbd5e1 !important;
+  height: 0 !important;
+  margin: 2rem 0 !important;
+  clear: both !important;
 }
 
 /* Custom Callouts */
@@ -476,5 +487,205 @@
 @keyframes zw-modal-pop {
   from { opacity: 0; transform: scale(0.96) translateY(-6px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ==========================================================================
+   Dual-Mode HTML Source Code Editor Styles
+   ========================================================================== */
+.zw-blog-code-view-container {
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  color: #f8fafc;
+  border-top: 1px solid #1e293b;
+  min-height: 380px;
+}
+
+.zw-blog-code-view-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+}
+
+.zw-blog-code-view-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.zw-blog-code-view-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: #0284c7;
+  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.zw-blog-code-view-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zw-blog-code-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cbd5e1;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.zw-blog-code-action-btn:hover {
+  background: #475569;
+  color: #ffffff;
+  border-color: #64748b;
+}
+
+.zw-blog-code-action-btn.is-active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.zw-blog-code-view-editor {
+  display: flex;
+  position: relative;
+  height: 400px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.zw-blog-code-gutter {
+  width: 48px;
+  padding: 16px 8px 16px 4px;
+  background: #090d16;
+  border-right: 1px solid #1e293b;
+  color: #64748b;
+  font-family: monospace, Consolas, "Courier New", Courier;
+  font-size: 13px;
+  line-height: 1.6;
+  text-align: right;
+  user-select: none;
+  overflow-y: hidden;
+  box-sizing: border-box;
+}
+
+.zw-blog-code-gutter-line {
+  min-height: 20.8px;
+}
+
+.zw-blog-code-textarea {
+  flex: 1;
+  padding: 16px;
+  background: transparent;
+  color: #f1f5f9;
+  border: none;
+  outline: none;
+  font-family: monospace, Consolas, "Courier New", Courier;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: none;
+  overflow-y: auto;
+  tab-size: 2;
+  box-sizing: border-box;
+}
+
+.zw-blog-code-textarea.wrap {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.zw-blog-code-textarea.nowrap {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+/* ==========================================================================
+   Universal In-Editor Citations & Figures
+   ========================================================================== */
+.zw-blog-editor-content .blog-figure,
+.blog-figure {
+  margin: 1.6em 0;
+  display: block;
+}
+
+.zw-blog-editor-content .blog-figure img,
+.blog-figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.zw-blog-editor-content .blog-figcaption,
+.blog-figcaption,
+.blog-featured-image-caption {
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.zw-blog-editor-content,
+.zw-blog-content,
+.blog-content,
+.zw-blog-prose,
+.tiptap.ProseMirror {
+  counter-reset: blog-citation-num;
+}
+
+.blog-citation {
+  counter-increment: blog-citation-num;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+  vertical-align: 0.15em;
+  line-height: 1.25;
+  margin: 0 3px;
+  padding: 1px 7px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+.blog-citation::before {
+  content: "[" counter(blog-citation-num) "]";
+  font-weight: 700;
+  color: #2563eb;
+  pointer-events: none;
+}
+
+.blog-citation:hover {
+  background-color: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e40af;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
 }
 

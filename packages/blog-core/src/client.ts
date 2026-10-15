@@ -3,6 +3,10 @@ import {
   BlogDatabaseAdapter,
   Post,
   BreadcrumbItem,
+  BlogRedirect,
+  CreateRedirectInput,
+  PaginationParams,
+  PaginatedResult,
 } from '@zwantum/blog-types';
 import { BlogStorageAdapter, MemoryStorageAdapter } from '@zwantum/blog-storage';
 import {
@@ -26,6 +30,7 @@ import { PublishingService } from './services/publishing-service';
 import { RevisionService } from './services/revision-service';
 import { CommentService } from './services/comment-service';
 import { SettingsService } from './services/settings-service';
+import { BackupService } from './services/backup-service';
 
 export interface BlogClientOptions {
   config?: BlogConfig;
@@ -46,6 +51,14 @@ export interface BlogClient {
   revisions: RevisionService;
   comments: CommentService;
   settings: SettingsService;
+  backup: BackupService;
+  redirects: {
+    getAll: (params?: PaginationParams) => Promise<PaginatedResult<BlogRedirect>>;
+    getBySource: (sourceUrl: string) => Promise<BlogRedirect | null>;
+    create: (input: CreateRedirectInput) => Promise<BlogRedirect>;
+    delete: (id: string) => Promise<boolean>;
+    incrementHit: (id: string) => Promise<void>;
+  };
   seo: {
     getMetadata: (post: Post) => ReturnType<typeof generatePostMetadata>;
     getArticleSchema: (post: Post) => ReturnType<typeof generateArticleSchema>;
@@ -95,6 +108,7 @@ export function createBlogClient(options?: BlogClientOptions): BlogClient {
   const revisions = new RevisionService(db);
   const comments = new CommentService(db);
   const settings = new SettingsService(db);
+  const backup = new BackupService(db);
 
   return {
     config,
@@ -109,6 +123,14 @@ export function createBlogClient(options?: BlogClientOptions): BlogClient {
     revisions,
     comments,
     settings,
+    backup,
+    redirects: {
+      getAll: (params?: PaginationParams) => db.getRedirects(params),
+      getBySource: (sourceUrl: string) => db.getRedirectBySource(sourceUrl),
+      create: (input: CreateRedirectInput) => db.createRedirect(input),
+      delete: (id: string) => db.deleteRedirect(id),
+      incrementHit: (id: string) => db.incrementRedirectHit(id),
+    },
     seo: {
       getMetadata: (post: Post) => generatePostMetadata(post, config),
       getArticleSchema: (post: Post) => generateArticleSchema(post, config),

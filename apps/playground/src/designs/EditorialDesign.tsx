@@ -93,11 +93,28 @@ export const EditorialDesign: React.FC = () => {
             </div>
 
             {selectedPost.featured_image?.url && (
-              <img
-                src={selectedPost.featured_image.url}
-                alt={selectedPost.featured_image.alt_text || selectedPost.title}
-                style={{ width: '100%', borderRadius: '12px', marginBottom: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
-              />
+              <figure style={{ margin: '0 0 32px 0' }}>
+                <img
+                  src={selectedPost.featured_image.url}
+                  alt={selectedPost.featured_image.alt_text || selectedPost.title}
+                  style={{ width: '100%', borderRadius: '12px', display: 'block', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}
+                />
+                {(selectedPost.featured_image_caption || (selectedPost.featured_image as any)?.caption) && (
+                  <figcaption
+                    className="blog-featured-image-caption"
+                    style={{
+                      fontSize: '0.875rem',
+                      color: '#78716c',
+                      marginTop: '8px',
+                      textAlign: 'center',
+                      fontStyle: 'italic',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {selectedPost.featured_image_caption || (selectedPost.featured_image as any)?.caption}
+                  </figcaption>
+                )}
+              </figure>
             )}
 
             {/* Render Tiptap Structured JSON Content */}
@@ -107,6 +124,34 @@ export const EditorialDesign: React.FC = () => {
 
             <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e7e5e4', fontFamily: "'Inter', sans-serif" }}>
               <ShareButtons title={selectedPost.title} />
+
+              {/* Tags Section below Share Option */}
+              {selectedPost.tags && selectedPost.tags.length > 0 && (
+                <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#78716c', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Tags:
+                  </span>
+                  {selectedPost.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        background: '#f5f5f4',
+                        color: '#44403c',
+                        fontSize: '12.5px',
+                        fontWeight: 500,
+                        border: '1px solid #e7e5e4',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      #{tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Reader Comments & Discussion Section */}

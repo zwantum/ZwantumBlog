@@ -78,11 +78,28 @@ export const MinimalNewsDesign: React.FC = () => {
             </h1>
 
             {selectedPost.featured_image?.url && (
-              <img
-                src={selectedPost.featured_image.url}
-                alt={selectedPost.title}
-                style={{ width: '100%', borderRadius: '8px', marginBottom: '24px' }}
-              />
+              <figure style={{ margin: '0 0 24px 0' }}>
+                <img
+                  src={selectedPost.featured_image.url}
+                  alt={selectedPost.title}
+                  style={{ width: '100%', borderRadius: '8px', display: 'block' }}
+                />
+                {(selectedPost.featured_image_caption || (selectedPost.featured_image as any)?.caption) && (
+                  <figcaption
+                    className="blog-featured-image-caption"
+                    style={{
+                      fontSize: '0.85rem',
+                      color: '#64748b',
+                      marginTop: '8px',
+                      textAlign: 'center',
+                      fontStyle: 'italic',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {selectedPost.featured_image_caption || (selectedPost.featured_image as any)?.caption}
+                  </figcaption>
+                )}
+              </figure>
             )}
 
             <div style={{ fontSize: '1.05rem', lineHeight: 1.75, color: '#334155' }}>
@@ -91,6 +108,33 @@ export const MinimalNewsDesign: React.FC = () => {
 
             <div style={{ marginTop: '40px', paddingTop: '20px', borderTop: '1px solid #e2e8f0' }}>
               <ShareButtons title={selectedPost.title} />
+
+              {/* Tags Section below Share Option */}
+              {selectedPost.tags && selectedPost.tags.length > 0 && (
+                <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Tags:
+                  </span>
+                  {selectedPost.tags.map((tag) => (
+                    <span
+                      key={tag.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '3px 10px',
+                        borderRadius: '4px',
+                        background: '#f1f5f9',
+                        color: '#334155',
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        border: '1px solid #e2e8f0',
+                      }}
+                    >
+                      #{tag.name}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Reader Comments & Discussion Section */}

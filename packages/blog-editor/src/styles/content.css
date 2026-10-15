@@ -206,3 +206,114 @@
   border-top: 1px solid #e2e8f0;
   margin: 2.5rem 0;
 }
+
+/* Figures & Captions */
+.blog-figure,
+.zw-blog-content figure {
+  margin: 2rem auto;
+  display: block;
+}
+
+.blog-figure img,
+.zw-blog-content figure img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.blog-figcaption,
+.zw-blog-content figcaption,
+.blog-featured-image-caption {
+  font-size: 0.875rem;
+  color: #64748b;
+  text-align: center;
+  margin-top: 0.65rem;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* Universal Reference Citation System with CSS Counter */
+.zw-blog-content,
+.blog-content,
+.zw-blog-prose {
+  counter-reset: blog-citation-num;
+}
+
+.blog-citation {
+  counter-increment: blog-citation-num;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+  vertical-align: 0.15em;
+  line-height: 1.25;
+  margin: 0 3px;
+  padding: 1px 7px;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+.blog-citation::before {
+  content: "[" counter(blog-citation-num) "]";
+  font-weight: 700;
+  color: #2563eb;
+  pointer-events: none;
+}
+
+.blog-citation:hover {
+  background-color: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e40af;
+  text-decoration: none;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
+}
+
+/* Editorial Drop Cap - strictly only the first top-level paragraph of the article */
+.zw-blog-content.has-drop-cap > p:first-of-type::first-letter,
+.blog-content.has-drop-cap > p:first-of-type::first-letter,
+.has-drop-cap > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.5rem;
+  line-height: 0.82;
+  margin-right: 0.12em;
+  margin-top: 0.08em;
+  font-weight: 700;
+  font-family: 'Cinzel', 'Merriweather', Georgia, serif;
+  color: inherit;
+}
+
+/* Strictly prevent drop caps on nested elements: blockquotes, lists, callouts, tables, figures, headers */
+.zw-blog-content blockquote p::first-letter,
+.blog-content blockquote p::first-letter,
+.zw-blog-content li p::first-letter,
+.blog-content li p::first-letter,
+.zw-blog-content ul p::first-letter,
+.blog-content ul p::first-letter,
+.zw-blog-content ol p::first-letter,
+.blog-content ol p::first-letter,
+.zw-blog-content table p::first-letter,
+.blog-content table p::first-letter,
+.zw-blog-content figcaption p::first-letter,
+.blog-content figcaption p::first-letter,
+.zw-blog-content aside p::first-letter,
+.blog-content aside p::first-letter,
+.zw-blog-content .callout p::first-letter,
+.blog-content .callout p::first-letter {
+  float: none !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  margin: 0 !important;
+  font-weight: inherit !important;
+  font-family: inherit !important;
+}
+

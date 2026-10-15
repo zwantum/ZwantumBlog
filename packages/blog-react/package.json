@@ -1,6 +1,6 @@
 {
   "name": "@zwantum/blog-react",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "React integration, hooks, and content renderer for ZwantumBlog",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

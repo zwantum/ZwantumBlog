@@ -20,7 +20,12 @@ export default function App() {
 
   return (
     <BlogProvider client={blogClient}>
-      <div>
+      <div
+        style={{
+          height: viewMode === 'dashboard' ? '100vh' : 'auto',
+          overflow: viewMode === 'dashboard' ? 'hidden' : 'visible',
+        }}
+      >
         {/* FLOATING SHOWCASE SWITCHER (NON-INTRUSIVE BOTTOM PILL) */}
         <div
           style={{

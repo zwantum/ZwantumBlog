@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Post, PostFilterInput, PaginationParams, PaginatedResult, Category, Tag } from '@zwantum/blog-types';
+import { Post, PostFilterInput, PaginationParams, PaginatedResult, Category, Tag, BlogSettings } from '@zwantum/blog-types';
 import { useBlog } from '../context/BlogProvider';
 
 export function useBlogPost(slugOrId: string) {
@@ -166,3 +166,28 @@ export function useTags() {
 
   return { tags, loading };
 }
+
+export function useBlogSettings() {
+  const blog = useBlog();
+  const [settings, setSettings] = useState<BlogSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    blog.settings
+      .get()
+      .then((st) => {
+        if (isMounted) setSettings(st);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [blog]);
+
+  return { settings, loading };
+}
+

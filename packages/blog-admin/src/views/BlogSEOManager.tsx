@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface BlogSEOManagerProps {
   client: BlogClient;
@@ -35,22 +36,39 @@ export const BlogSEOManager: React.FC<BlogSEOManagerProps> = ({ client, classNam
           type="button"
           className={`zw-admin-tab-btn ${activeTab === 'sitemap' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('sitemap')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
-          🗺️ XML Sitemap
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
+            <line x1="9" y1="3" x2="9" y2="18" />
+            <line x1="15" y1="6" x2="15" y2="21" />
+          </svg>
+          <span>XML Sitemap</span>
         </button>
         <button
           type="button"
           className={`zw-admin-tab-btn ${activeTab === 'rss' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('rss')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
-          📡 RSS 2.0 Feed
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 11a9 9 0 0 1 9 9" />
+            <path d="M4 4a16 16 0 0 1 16 16" />
+            <circle cx="5" cy="19" r="1" />
+          </svg>
+          <span>RSS 2.0 Feed</span>
         </button>
         <button
           type="button"
           className={`zw-admin-tab-btn ${activeTab === 'schema' ? 'is-active' : ''}`}
           onClick={() => setActiveTab('schema')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
         >
-          📐 Structured Data (JSON-LD)
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span>Structured Data (JSON-LD)</span>
         </button>
       </div>
 
@@ -69,7 +87,7 @@ export const BlogSEOManager: React.FC<BlogSEOManagerProps> = ({ client, classNam
                   className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                   onClick={() => {
                     navigator.clipboard.writeText(sitemapXml);
-                    alert('Sitemap XML copied to clipboard.');
+                    toast.info('Sitemap XML copied to clipboard.', 'Copied');
                   }}
                 >
                   Copy XML
@@ -100,7 +118,7 @@ export const BlogSEOManager: React.FC<BlogSEOManagerProps> = ({ client, classNam
                   className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                   onClick={() => {
                     navigator.clipboard.writeText(rssXml);
-                    alert('RSS Feed XML copied to clipboard.');
+                    toast.info('RSS Feed XML copied to clipboard.', 'Copied');
                   }}
                 >
                   Copy RSS

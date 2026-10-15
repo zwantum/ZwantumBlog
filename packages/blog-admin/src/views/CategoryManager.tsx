@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Category, CategoryInput } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface CategoryManagerProps {
   client: BlogClient;
   className?: string;
+  siteUrl?: string;
+  basePath?: string;
 }
 
 const slugify = (str: string) =>
@@ -15,7 +18,8 @@ const slugify = (str: string) =>
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, className = '' }) => {
+export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, className = '', siteUrl, basePath }) => {
+  const liveOrigin = siteUrl || (typeof window !== 'undefined' && window.location.origin ? window.location.origin : 'https://zwantum.com');
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,7 +117,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file');
+      toast.warning('Please upload a valid image file', 'Invalid File');
       return;
     }
 
@@ -151,14 +155,16 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
 
       if (editingCategory) {
         await client.categories.update(editingCategory.id, input);
+        toast.success('Category updated successfully.', 'Category Updated');
       } else {
         await client.categories.create(input);
+        toast.success('Category created successfully.', 'Category Created');
       }
 
       closeModal();
       fetchCategories();
     } catch (err) {
-      alert(`Error saving category: ${err}`);
+      toast.error(`Error saving category: ${err}`, 'Save Error');
     }
   };
 
@@ -170,8 +176,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
         closeModal();
       }
       fetchCategories();
+      toast.success('Category deleted successfully.', 'Category Deleted');
     } catch (err) {
-      alert(`Error deleting category: ${err}`);
+      toast.error(`Error deleting category: ${err}`, 'Delete Error');
     }
   };
 
@@ -348,7 +355,9 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                                 flexShrink: 0,
                               }}
                             >
-                              📁
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                              </svg>
                             </div>
                           )}
                           <div>
@@ -385,7 +394,6 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
                               padding: '3px 8px',
                               borderRadius: '12px',
                               background: '#dcfce7',
@@ -394,7 +402,6 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                               fontWeight: 600,
                             }}
                           >
-                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a' }} />
                             Indexable
                           </span>
                         ) : (
@@ -402,7 +409,6 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
                               padding: '3px 8px',
                               borderRadius: '12px',
                               background: '#fef3c7',
@@ -411,7 +417,6 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                               fontWeight: 600,
                             }}
                           >
-                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#d97706' }} />
                             Noindex
                           </span>
                         )}
@@ -948,7 +953,7 @@ export const CategoryManager: React.FC<CategoryManagerProps> = ({ client, classN
                         Google SERP Preview (Eligible to Rank)
                       </div>
                       <div style={{ fontSize: '11px', color: '#202124', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        https://example.com › blog › category › {slug || slugify(name) || 'category'}
+                        {liveOrigin} › blog › category › {slug || slugify(name) || 'category'}
                       </div>
                       <div
                         style={{

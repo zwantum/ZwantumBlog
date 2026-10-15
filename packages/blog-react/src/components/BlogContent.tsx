@@ -1,4 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import '../styles/content.css';
+import { useOptionalBlog } from '../context/BlogProvider';
+import { TableOfContents, injectHeadingIds } from './TableOfContents';
 
 export interface TiptapNode {
   type?: string;
@@ -11,19 +14,76 @@ export interface TiptapNode {
 export interface BlogContentProps {
   content?: TiptapNode | Record<string, any> | string | null;
   className?: string;
+  enableDropCap?: boolean;
+  enableTableOfContents?: boolean;
   customRenderers?: Record<string, (node: TiptapNode, index: number) => React.ReactNode>;
 }
 
 export const BlogContent: React.FC<BlogContentProps> = ({
   content,
   className = 'zw-blog-prose',
+  enableDropCap,
+  enableTableOfContents,
   customRenderers = {},
 }) => {
+  const blog = useOptionalBlog();
+  const [contextDropCap, setContextDropCap] = useState(false);
+  const [contextToc, setContextToc] = useState(true);
+
+  useEffect(() => {
+    if (enableDropCap !== undefined && enableTableOfContents !== undefined) return;
+    if (blog) {
+      blog.settings
+        .get()
+        .then((st) => {
+          if (st) {
+            if (enableDropCap === undefined) {
+              setContextDropCap(!!st.enableDropCap);
+            }
+            if (enableTableOfContents === undefined) {
+              setContextToc(st.enableTableOfContents !== false);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [blog, enableDropCap, enableTableOfContents]);
+
   if (!content) return null;
 
-  // If passed raw HTML string, fallback to dangerouslySetInnerHTML safely
+  const showDropCap = enableDropCap !== undefined ? enableDropCap : contextDropCap;
+  const showToc = enableTableOfContents !== undefined ? enableTableOfContents : contextToc;
+  const dropCapClass = showDropCap ? 'has-drop-cap' : '';
+
+  // If passed raw string, check if it's stringified JSON first
   if (typeof content === 'string') {
-    return <div className={className} dangerouslySetInnerHTML={{ __html: content }} />;
+    const trimmed = content.trim();
+    if (trimmed.startsWith('{') && trimmed.includes('"type"')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed && Array.isArray(parsed.content)) {
+          return (
+            <>
+              {showToc && <TableOfContents content={parsed} />}
+              <div className={`zw-blog-content ${className} ${dropCapClass}`}>
+                {parsed.content.map((node: TiptapNode, index: number) => renderNode(node, index, customRenderers))}
+              </div>
+            </>
+          );
+        }
+      } catch {}
+    }
+
+    const processedHtml = injectHeadingIds(content);
+    return (
+      <>
+        {showToc && <TableOfContents content={content} />}
+        <div
+          className={`zw-blog-content ${className} ${dropCapClass}`}
+          dangerouslySetInnerHTML={{ __html: processedHtml }}
+        />
+      </>
+    );
   }
 
   const doc = content as TiptapNode;
@@ -32,9 +92,12 @@ export const BlogContent: React.FC<BlogContentProps> = ({
   }
 
   return (
-    <div className={`zw-blog-content ${className}`}>
-      {doc.content.map((node, index) => renderNode(node, index, customRenderers))}
-    </div>
+    <>
+      {showToc && <TableOfContents content={content} />}
+      <div className={`zw-blog-content ${className} ${dropCapClass}`}>
+        {doc.content.map((node, index) => renderNode(node, index, customRenderers))}
+      </div>
+    </>
   );
 };
 
@@ -51,7 +114,19 @@ function renderNode(
     case 'heading': {
       const level = node.attrs?.level || 2;
       const Tag = `h${level}` as keyof JSX.IntrinsicElements;
-      return <Tag key={index}>{renderChildren(node.content, customRenderers)}</Tag>;
+      const rawText = (node.content || []).map((c) => c.text || '').join('');
+      const headingId =
+        rawText
+          .toLowerCase()
+          .trim()
+          .replace(/[^\w\s-]/g, '')
+          .replace(/[\s_-]+/g, '-')
+          .replace(/^-+|-+$/g, '') || `section-${index}`;
+      return (
+        <Tag key={index} id={headingId}>
+          {renderChildren(node.content, customRenderers)}
+        </Tag>
+      );
     }
 
     case 'paragraph': {
@@ -106,8 +181,9 @@ function renderNode(
     }
 
     case 'image': {
+      const captionText = node.attrs?.caption || node.attrs?.title;
       return (
-        <figure key={index} className="zw-blog-image-figure">
+        <figure key={index} className="blog-figure zw-blog-image-figure">
           <img
             src={node.attrs?.src}
             alt={node.attrs?.alt || ''}
@@ -115,8 +191,42 @@ function renderNode(
             loading="lazy"
             style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
           />
-          {node.attrs?.title && <figcaption style={{ fontSize: '0.85em', color: '#64748b', marginTop: '6px' }}>{node.attrs.title}</figcaption>}
+          {captionText && (
+            <figcaption className="blog-figcaption" style={{ fontSize: '0.85em', color: '#64748b', marginTop: '6px', textAlign: 'center' }}>
+              {captionText}
+            </figcaption>
+          )}
         </figure>
+      );
+    }
+
+    case 'figure': {
+      return (
+        <figure key={index} className={`blog-figure ${node.attrs?.class || ''}`}>
+          {renderChildren(node.content, customRenderers)}
+        </figure>
+      );
+    }
+
+    case 'figcaption': {
+      return (
+        <figcaption key={index} className={`blog-figcaption ${node.attrs?.class || ''}`}>
+          {renderChildren(node.content, customRenderers)}
+        </figcaption>
+      );
+    }
+
+    case 'img': {
+      return (
+        <img
+          key={index}
+          src={node.attrs?.src}
+          alt={node.attrs?.alt || ''}
+          title={node.attrs?.title || ''}
+          className={node.attrs?.class || ''}
+          loading="lazy"
+          style={{ maxWidth: '100%', height: 'auto', borderRadius: '8px' }}
+        />
       );
     }
 
@@ -168,8 +278,8 @@ function renderNode(
 
     case 'table': {
       return (
-        <div key={index} className="zw-blog-table-wrap" style={{ overflowX: 'auto', margin: '1.2em 0' }}>
-          <table>
+        <div key={index} className="zw-blog-table-wrap" style={{ overflowX: 'auto', margin: '1.8em 0', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.95rem' }}>
             <tbody>{renderChildren(node.content, customRenderers)}</tbody>
           </table>
         </div>
@@ -177,15 +287,58 @@ function renderNode(
     }
 
     case 'tableRow': {
-      return <tr key={index}>{renderChildren(node.content, customRenderers)}</tr>;
+      return (
+        <tr key={index} style={{ borderBottom: '1px solid #cbd5e1' }}>
+          {renderChildren(node.content, customRenderers)}
+        </tr>
+      );
     }
 
     case 'tableHeader': {
-      return <th key={index}>{renderChildren(node.content, customRenderers)}</th>;
+      const colSpan = node.attrs?.colspan || undefined;
+      const rowSpan = node.attrs?.rowspan || undefined;
+      const colwidth = node.attrs?.colwidth;
+      const width = Array.isArray(colwidth) && colwidth[0] ? `${colwidth[0]}px` : undefined;
+      return (
+        <th
+          key={index}
+          colSpan={colSpan}
+          rowSpan={rowSpan}
+          style={{
+            border: '1px solid #cbd5e1',
+            padding: '12px 16px',
+            background: '#f8fafc',
+            fontWeight: 600,
+            color: '#0f172a',
+            width,
+          }}
+        >
+          {renderChildren(node.content, customRenderers)}
+        </th>
+      );
     }
 
     case 'tableCell': {
-      return <td key={index}>{renderChildren(node.content, customRenderers)}</td>;
+      const colSpan = node.attrs?.colspan || undefined;
+      const rowSpan = node.attrs?.rowspan || undefined;
+      const colwidth = node.attrs?.colwidth;
+      const width = Array.isArray(colwidth) && colwidth[0] ? `${colwidth[0]}px` : undefined;
+      return (
+        <td
+          key={index}
+          colSpan={colSpan}
+          rowSpan={rowSpan}
+          style={{
+            border: '1px solid #cbd5e1',
+            padding: '12px 16px',
+            color: '#334155',
+            background: '#ffffff',
+            width,
+          }}
+        >
+          {renderChildren(node.content, customRenderers)}
+        </td>
+      );
     }
 
     default: {
@@ -242,6 +395,20 @@ function applyMarks(
             target={mark.attrs?.target || '_blank'}
             rel="noopener noreferrer"
             style={{ color: '#4f46e5', textDecoration: 'underline' }}
+          >
+            {acc}
+          </a>
+        );
+      case 'blogCitation':
+      case 'citation':
+        return (
+          <a
+            key={k}
+            href={mark.attrs?.href || '#'}
+            target={mark.attrs?.target || '_blank'}
+            rel={mark.attrs?.rel === 'dofollow' ? 'noopener' : 'nofollow noopener'}
+            data-citation="true"
+            className="blog-citation"
           >
             {acc}
           </a>

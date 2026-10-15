@@ -29,3 +29,9 @@ export function useBlog(): BlogClient {
   }
   return ctx.client;
 }
+
+export function useOptionalBlog(): BlogClient | null {
+  const ctx = useContext(BlogContext);
+  return ctx ? ctx.client : null;
+}
+

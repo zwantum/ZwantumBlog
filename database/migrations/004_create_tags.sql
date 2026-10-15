@@ -10,9 +10,13 @@ CREATE TABLE IF NOT EXISTS blog_tags (
     seo_description TEXT,
     canonical_url TEXT,
     robots VARCHAR(50) DEFAULT 'index,follow',
+    no_index BOOLEAN NOT NULL DEFAULT false,
     post_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Backwards-compatible column check
+ALTER TABLE blog_tags ADD COLUMN IF NOT EXISTS no_index BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS idx_blog_tags_slug ON blog_tags(slug);

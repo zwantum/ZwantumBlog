@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Media } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface MediaLibraryProps {
   client: BlogClient;
@@ -51,6 +52,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
   const [selectedItem, setSelectedItem] = useState<UnifiedMediaItem | null>(null);
   const [altText, setAltText] = useState<string>('');
   const [title, setTitle] = useState<string>('');
+  const [caption, setCaption] = useState<string>('');
   const [rlsError, setRlsError] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -237,6 +239,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
         setSelectedItem(newItem);
         setAltText(newItem.alt_text || '');
         setTitle(newItem.title || '');
+        setCaption(newItem.caption || '');
       } else {
         const uploaded = await client.media.upload({
           file,
@@ -262,6 +265,8 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
         setSelectedItem(newItem);
         setAltText(newItem.alt_text || '');
         setTitle(newItem.title || '');
+        setCaption(newItem.caption || '');
+        toast.success(`"${file.name}" uploaded successfully.`, 'Upload Complete');
       }
     } catch (err: any) {
       const errMsg = err?.message || String(err);
@@ -272,7 +277,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
       ) {
         setRlsError(true);
       } else {
-        alert(`Upload failed: ${errMsg}`);
+        toast.error(`Upload failed: ${errMsg}`, 'Upload Error');
       }
     } finally {
       setUploading(false);
@@ -290,7 +295,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
       file_size: item.size,
       alt_text: altText || item.alt_text || item.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
       title: title || item.title || item.name,
-      caption: item.caption || '',
+      caption: caption || item.caption || '',
       storage_provider: 'supabase',
       storage_path: item.name,
       created_at: item.created_at,
@@ -318,8 +323,9 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
       if (selectedItem?.id === item.id || selectedItem?.name === item.name) {
         setSelectedItem(null);
       }
+      toast.success(`"${item.name}" was deleted successfully.`, 'Media Deleted');
     } catch (err: any) {
-      alert(`Delete failed: ${err.message || String(err)}`);
+      toast.error(`Delete failed: ${err.message || String(err)}`, 'Delete Error');
     }
   };
 
@@ -336,22 +342,23 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
               url: selectedItem.url,
               alt_text: altText,
               title,
+              caption,
               storage_provider: 'supabase',
               storage_path: selectedItem.name,
             },
             { onConflict: 'url' }
           );
       } else {
-        await client.media.update(selectedItem.id, { alt_text: altText, title });
+        await client.media.update(selectedItem.id, { alt_text: altText, title, caption });
       }
 
       setItems((prev) =>
-        prev.map((i) => (i.name === selectedItem.name ? { ...i, alt_text: altText, title } : i))
+        prev.map((i) => (i.name === selectedItem.name ? { ...i, alt_text: altText, title, caption } : i))
       );
-      setSelectedItem((prev) => (prev ? { ...prev, alt_text: altText, title } : null));
-      alert('Media details saved successfully.');
+      setSelectedItem((prev) => (prev ? { ...prev, alt_text: altText, title, caption } : null));
+      toast.success('Media details saved successfully.', 'Saved');
     } catch (err: any) {
-      alert(`Save failed: ${err.message || String(err)}`);
+      toast.error(`Save failed: ${err.message || String(err)}`, 'Save Error');
     }
   };
 
@@ -480,7 +487,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
               type="button"
               onClick={() => {
                 navigator.clipboard.writeText(SUPABASE_STORAGE_SQL_FIX);
-                alert('SQL copied! Paste and run it in your Supabase Dashboard -> SQL Editor.');
+                toast.info('SQL copied to clipboard. Run it in Supabase Dashboard -> SQL Editor.', 'SQL Copied');
               }}
               style={{
                 background: '#ea580c',
@@ -544,6 +551,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                       setSelectedItem(item);
                       setAltText(item.alt_text || '');
                       setTitle(item.title || '');
+                      setCaption(item.caption || '');
                     }}
                     style={{
                       border: isSelected ? '2px solid #ffcc00' : '1px solid #e2e8f0',
@@ -603,6 +611,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
           <div
             style={{
               width: '280px',
+              minWidth: '280px',
               border: '1px solid #e2e8f0',
               borderRadius: '10px',
               padding: '16px',
@@ -611,6 +620,8 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
               justifyContent: 'space-between',
               background: '#f8fafc',
               overflowY: 'auto',
+              overflowX: 'hidden',
+              boxSizing: 'border-box',
               maxHeight: onSelectMedia ? '440px' : '620px',
             }}
           >
@@ -655,6 +666,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                     cursor: 'pointer',
                     boxShadow: '0 2px 8px rgba(255, 204, 0, 0.45)',
                     textAlign: 'center',
+                    boxSizing: 'border-box',
                   }}
                 >
                   ✓ Select This Image
@@ -671,29 +683,43 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
 
               <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Alt Text (for SEO & Accessibility)
+                  Alt Text
                 </label>
                 <input
                   type="text"
                   className="zw-admin-input"
-                  style={{ fontSize: '12px', padding: '6px 10px', width: '100%' }}
+                  style={{ fontSize: '12px', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={altText}
                   onChange={(e) => setAltText(e.target.value)}
                   placeholder="Describe image for search engines..."
                 />
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
+              <div style={{ marginBottom: '10px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
                   Title
                 </label>
                 <input
                   type="text"
                   className="zw-admin-input"
-                  style={{ fontSize: '12px', padding: '6px 10px', width: '100%' }}
+                  style={{ fontSize: '12px', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Image title..."
+                />
+              </div>
+
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Caption
+                </label>
+                <input
+                  type="text"
+                  className="zw-admin-input"
+                  style={{ fontSize: '12px', padding: '6px 10px', width: '100%', boxSizing: 'border-box' }}
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  placeholder="Caption displayed under image..."
                 />
               </div>
             </div>
@@ -703,7 +729,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 type="button"
                 className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                 onClick={handleSaveDetails}
-                style={{ flex: 1 }}
+                style={{ flex: 1, minWidth: '85px', boxSizing: 'border-box' }}
               >
                 Save Details
               </button>
@@ -711,6 +737,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 type="button"
                 className="zw-admin-btn zw-admin-btn-secondary zw-admin-btn-sm"
                 onClick={() => copyUrl(selectedItem.url)}
+                style={{ boxSizing: 'border-box' }}
               >
                 {copied ? '✓ Copied!' : 'Copy URL'}
               </button>
@@ -718,6 +745,7 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 type="button"
                 className="zw-admin-btn zw-admin-btn-danger zw-admin-btn-sm"
                 onClick={() => handleDelete(selectedItem)}
+                style={{ boxSizing: 'border-box' }}
               >
                 Delete
               </button>

@@ -61,12 +61,15 @@ CREATE TABLE IF NOT EXISTS blog_categories (
     seo_description TEXT,
     canonical_url TEXT,
     robots VARCHAR(50) DEFAULT 'index,follow',
+    no_index BOOLEAN NOT NULL DEFAULT false,
     display_order INT DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     post_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE blog_categories ADD COLUMN IF NOT EXISTS no_index BOOLEAN NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_blog_categories_slug ON blog_categories(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_categories_parent_id ON blog_categories(parent_id);
 
@@ -80,10 +83,13 @@ CREATE TABLE IF NOT EXISTS blog_tags (
     seo_description TEXT,
     canonical_url TEXT,
     robots VARCHAR(50) DEFAULT 'index,follow',
+    no_index BOOLEAN NOT NULL DEFAULT false,
     post_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE blog_tags ADD COLUMN IF NOT EXISTS no_index BOOLEAN NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS idx_blog_tags_slug ON blog_tags(slug);
 
 -- 005: Posts
@@ -95,6 +101,7 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     content JSONB NOT NULL DEFAULT '{"type":"doc","content":[]}'::jsonb,
     content_html TEXT,
     featured_image_id UUID REFERENCES blog_media(id) ON DELETE SET NULL,
+    featured_image_caption TEXT,
     author_id UUID REFERENCES blog_authors(id) ON DELETE SET NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'pending_review', 'scheduled', 'published', 'archived', 'trash')),
     content_type VARCHAR(50) NOT NULL DEFAULT 'article',
@@ -108,6 +115,11 @@ CREATE TABLE IF NOT EXISTS blog_posts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Safe backwards-compatible columns check for existing databases
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS content_html TEXT;
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS featured_image_caption TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_author ON blog_posts(author_id);
@@ -222,20 +234,57 @@ VALUES (
         "basePath": "/blog",
         "postsPerPage": 10,
         "defaultPostStatus": "draft",
-        "enableComments": true,
+        "enableComments": false,
         "enableMedia": true,
         "enableScheduling": true,
         "enableRevisions": true,
         "enableRedirects": true,
+        "enableDropCap": false,
+        "enableAutosave": true,
+        "enableTableOfContents": true,
+        "enableOgImageGenerator": true,
         "timezone": "UTC"
     }'::jsonb,
     'General blog module configuration'
 )
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) DO UPDATE SET
+    value = '{
+        "blogTitle": "Blog",
+        "basePath": "/blog",
+        "postsPerPage": 10,
+        "defaultPostStatus": "draft",
+        "enableComments": false,
+        "enableMedia": true,
+        "enableScheduling": true,
+        "enableRevisions": true,
+        "enableRedirects": true,
+        "enableDropCap": false,
+        "enableAutosave": true,
+        "enableTableOfContents": true,
+        "enableOgImageGenerator": true,
+        "timezone": "UTC"
+    }'::jsonb || blog_settings.value;
 
 -- ============================================================================
--- 013: Storage Bucket & RLS Policies (Supabase Storage)
+-- 013: Backups & Disaster Recovery
 -- ============================================================================
+CREATE TABLE IF NOT EXISTS blog_backups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    filename VARCHAR(255) NOT NULL,
+    version VARCHAR(50) NOT NULL DEFAULT '1.0.0',
+    source VARCHAR(100) NOT NULL DEFAULT 'admin-export',
+    file_size BIGINT NOT NULL DEFAULT 0,
+    storage_path TEXT,
+    stats JSONB NOT NULL DEFAULT '{}'::jsonb,
+    payload JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_blog_backups_created_at ON blog_backups(created_at DESC);
+
+-- ============================================================================
+-- 014: Storage Buckets & RLS Policies (Supabase Storage)
+-- ============================================================================
+-- Public Media Bucket
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('media', 'media', true)
 ON CONFLICT (id) DO UPDATE SET public = true;
@@ -253,3 +302,21 @@ DROP POLICY IF EXISTS "Public Media Delete" ON storage.objects;
 CREATE POLICY "Public Media Delete" ON storage.objects FOR DELETE USING (bucket_id = 'media');
 
 ALTER TABLE IF EXISTS blog_media DISABLE ROW LEVEL SECURITY;
+
+-- Private Backups Bucket
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('backups', 'backups', false)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "Authenticated Users Select Backups" ON storage.objects;
+CREATE POLICY "Authenticated Users Select Backups" ON storage.objects
+    FOR SELECT USING (bucket_id = 'backups' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated Users Insert Backups" ON storage.objects;
+CREATE POLICY "Authenticated Users Insert Backups" ON storage.objects
+    FOR INSERT WITH CHECK (bucket_id = 'backups' AND auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Authenticated Users Delete Backups" ON storage.objects;
+CREATE POLICY "Authenticated Users Delete Backups" ON storage.objects
+    FOR DELETE USING (bucket_id = 'backups' AND auth.role() = 'authenticated');
+

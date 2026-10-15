@@ -10,6 +10,7 @@ import { AuthorManager } from './AuthorManager';
 import { MediaLibrary } from './MediaLibrary';
 import { CommentManager } from './CommentManager';
 import { BlogSettingsView } from './BlogSettingsView';
+import { ToastContainer } from '../components/Toast';
 
 export type BlogAdminView =
   | 'overview'
@@ -31,6 +32,8 @@ export interface BlogAdminProps {
   initialView?: BlogAdminView;
   title?: string;
   subtitle?: string;
+  siteUrl?: string;
+  basePath?: string;
 }
 
 // Crisp Outline SVG Icons
@@ -111,6 +114,49 @@ const Icons = {
   ),
 };
 
+const parseInitialState = (fallback: BlogAdminView): { view: BlogAdminView; postId?: string } => {
+  if (typeof window !== 'undefined') {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const viewParam = params.get('view') as BlogAdminView | null;
+      const idParam = params.get('id') || params.get('postId') || undefined;
+
+      const validViews: BlogAdminView[] = [
+        'overview',
+        'posts',
+        'new-post',
+        'edit-post',
+        'categories',
+        'tags',
+        'authors',
+        'media',
+        'comments',
+        'settings',
+      ];
+
+      if (viewParam && validViews.includes(viewParam)) {
+        if (viewParam === 'edit-post' && !idParam) {
+          return { view: 'posts', postId: undefined };
+        }
+        return { view: viewParam, postId: idParam };
+      }
+
+      // Check localStorage if URL does not specify a view
+      const storedView = localStorage.getItem('zw_blog_active_view') as BlogAdminView | null;
+      const storedPostId = localStorage.getItem('zw_blog_editing_post_id') || undefined;
+      if (storedView && validViews.includes(storedView)) {
+        if (storedView === 'edit-post' && !storedPostId) {
+          return { view: 'posts', postId: undefined };
+        }
+        return { view: storedView, postId: storedPostId };
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return { view: fallback, postId: undefined };
+};
+
 /**
  * BlogAdmin: The all-in-one unified dashboard component for ZwantumBlog.
  * Drop this single component into any existing or new React/Next.js dashboard.
@@ -122,9 +168,12 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
   initialView = 'overview',
   title = 'Blog',
   subtitle = 'Create • Share • Inspire',
+  siteUrl,
+  basePath,
 }) => {
-  const [activeView, setActiveView] = useState<BlogAdminView>(initialView);
-  const [editingPostId, setEditingPostId] = useState<string | undefined>(undefined);
+  const [initialNavState] = useState(() => parseInitialState(initialView));
+  const [activeView, setActiveView] = useState<BlogAdminView>(initialNavState.view);
+  const [editingPostId, setEditingPostId] = useState<string | undefined>(initialNavState.postId);
   const [pendingComments, setPendingComments] = useState<number>(0);
   const [settings, setSettings] = useState<BlogSettings | null>(null);
   const [isBlogsOpen, setIsBlogsOpen] = useState<boolean>(true);
@@ -132,6 +181,52 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
   // Media Picker Modal State (for Featured Image and Content insertion)
   const [showMediaPickerModal, setShowMediaPickerModal] = useState<boolean>(false);
   const [mediaPickerSelectCallback, setMediaPickerSelectCallback] = useState<((media: Media) => void) | null>(null);
+
+  // Synchronize view & editing post to URL query parameters and localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      params.set('view', activeView);
+      if (activeView === 'edit-post' && editingPostId) {
+        params.set('id', editingPostId);
+      } else {
+        params.delete('id');
+        params.delete('postId');
+      }
+
+      const queryString = params.toString();
+      const newUrl = `${window.location.pathname}${queryString ? `?${queryString}` : ''}${window.location.hash}`;
+      const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+      if (currentUrl !== newUrl) {
+        window.history.replaceState({ view: activeView, postId: editingPostId }, '', newUrl);
+      }
+
+      localStorage.setItem('zw_blog_active_view', activeView);
+      if (activeView === 'edit-post' && editingPostId) {
+        localStorage.setItem('zw_blog_editing_post_id', editingPostId);
+      } else {
+        localStorage.removeItem('zw_blog_editing_post_id');
+      }
+    } catch {
+      // Ignore
+    }
+  }, [activeView, editingPostId]);
+
+  // Support browser Back and Forward navigation
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = () => {
+      const state = parseInitialState(initialView);
+      setActiveView(state.view);
+      setEditingPostId(state.postId);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [initialView]);
 
   // Load blog settings to determine active modules
   useEffect(() => {
@@ -158,7 +253,6 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
     { key: 'overview', label: 'Overview', icon: Icons.Overview, badge: undefined },
     { key: 'posts', label: 'Posts', icon: Icons.Posts, badge: undefined },
     { key: 'categories', label: 'Categories', icon: Icons.Categories, badge: undefined },
-    { key: 'tags', label: 'Tags', icon: Icons.Tags, badge: undefined },
     { key: 'authors', label: 'Authors', icon: Icons.Authors, badge: undefined },
     ...(isMediaEnabled
       ? [{ key: 'media', label: 'Media', icon: Icons.Media, badge: undefined }]
@@ -183,7 +277,9 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
       className={`zw-blog-admin-root ${className}`}
       style={{
         display: 'flex',
-        minHeight: '100vh',
+        height: '100vh',
+        maxHeight: '100vh',
+        overflow: 'hidden',
         background: '#f8fafc',
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
       }}
@@ -192,6 +288,8 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
       <aside
         style={{
           width: '255px',
+          height: '100vh',
+          maxHeight: '100vh',
           background: '#ffffff',
           color: '#0f172a',
           display: 'flex',
@@ -199,6 +297,10 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
           flexShrink: 0,
           borderRight: '1px solid #f1f5f9',
           padding: '24px 16px',
+          boxSizing: 'border-box',
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
         }}
       >
         {/* Brand Header */}
@@ -326,12 +428,13 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
                       {item.badge && (
                         <span
                           style={{
-                            background: active ? '#0f172a' : '#ffcc00',
-                            color: active ? '#ffcc00' : '#0f172a',
+                            background: active ? '#ffffff' : '#fef08a',
+                            color: active ? '#713f12' : '#854d0e',
                             fontSize: '11px',
-                            fontWeight: 600,
-                            padding: '1px 6px',
+                            fontWeight: 700,
+                            padding: '1px 7px',
                             borderRadius: '10px',
+                            boxShadow: active ? '0 1px 3px rgba(0, 0, 0, 0.08)' : 'none',
                           }}
                         >
                           {item.badge}
@@ -344,29 +447,23 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
             )}
           </div>
         </nav>
-
-        {/* Sidebar Copyright */}
-        <div
-          style={{
-            padding: '16px 20px',
-            borderTop: '1px solid #f1f5f9',
-            fontSize: '11px',
-            color: '#94a3b8',
-            textAlign: 'center',
-            marginTop: 'auto',
-            background: '#ffffff',
-          }}
-        >
-          <div>© {new Date().getFullYear()} <strong>Zwantum</strong></div>
-          <div style={{ marginTop: '3px', color: '#64748b' }}>
-            Powered by <strong style={{ color: '#0f172a' }}>Zwantum</strong>
-          </div>
-        </div>
       </aside>
 
       {/* 2. MAIN WORKSPACE */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <main style={{ flex: 1, padding: '32px', overflowY: 'auto' }}>
+      <div
+        style={{
+          flex: 1,
+          height: '100vh',
+          maxHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          minWidth: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          boxSizing: 'border-box',
+        }}
+      >
+        <main style={{ flex: 1, padding: '32px', boxSizing: 'border-box', maxWidth: '100%' }}>
           {activeView === 'overview' && (
             <BlogOverview
               client={client}
@@ -398,9 +495,19 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
 
           {activeView === 'new-post' && (
             <PostEditor
+              key="new-post"
               client={client}
-              onBack={() => setActiveView('posts')}
-              onSaveSuccess={() => setActiveView('posts')}
+              siteUrl={siteUrl}
+              basePath={basePath}
+              onBack={() => {
+                setEditingPostId(undefined);
+                setActiveView('posts');
+              }}
+              onSaveSuccess={(savedPost) => {
+                // Stay on editor: transition seamlessly to edit mode for the newly saved post!
+                setEditingPostId(savedPost.id);
+                setActiveView('edit-post');
+              }}
               onOpenMediaLibrary={(onSelect) => {
                 setMediaPickerSelectCallback(() => onSelect);
                 setShowMediaPickerModal(true);
@@ -410,10 +517,19 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
 
           {activeView === 'edit-post' && (
             <PostEditor
+              key={`edit-post-${editingPostId}`}
               client={client}
               postId={editingPostId}
-              onBack={() => setActiveView('posts')}
-              onSaveSuccess={() => setActiveView('posts')}
+              siteUrl={siteUrl}
+              basePath={basePath}
+              onBack={() => {
+                setEditingPostId(undefined);
+                setActiveView('posts');
+              }}
+              onSaveSuccess={(savedPost) => {
+                // Stay on editor: do NOT redirect to post list!
+                setEditingPostId(savedPost.id);
+              }}
               onOpenMediaLibrary={(onSelect) => {
                 setMediaPickerSelectCallback(() => onSelect);
                 setShowMediaPickerModal(true);
@@ -421,9 +537,9 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
             />
           )}
 
-          {activeView === 'categories' && <CategoryManager client={client} />}
+          {activeView === 'categories' && <CategoryManager client={client} siteUrl={siteUrl} basePath={basePath} />}
 
-          {activeView === 'tags' && <TagManager client={client} />}
+          {activeView === 'tags' && <TagManager client={client} siteUrl={siteUrl} basePath={basePath} />}
 
           {activeView === 'authors' && <AuthorManager client={client} />}
 
@@ -548,6 +664,9 @@ export const BlogAdmin: React.FC<BlogAdminProps> = ({
           </div>
         </div>
       )}
+
+      {/* Global Top-Right Push Notification Toast Container */}
+      <ToastContainer />
     </div>
   );
 };

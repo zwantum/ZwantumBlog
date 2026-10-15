@@ -8,6 +8,8 @@ export interface BlogFeatureConfig {
   redirects?: boolean;
   seo?: boolean;
   media?: boolean;
+  tableOfContents?: boolean;
+  ogImageGenerator?: boolean;
 }
 
 export interface BlogEditorConfig {
@@ -20,6 +22,8 @@ export interface BlogEditorConfig {
   faq?: boolean;
   callout?: boolean;
   cta?: boolean;
+  citation?: boolean;
+  enableDropCap?: boolean;
 }
 
 export interface BlogSEOConfig {
@@ -58,6 +62,10 @@ export interface BlogSettings {
   enableScheduling: boolean;
   enableRevisions: boolean;
   enableRedirects: boolean;
+  enableDropCap?: boolean;
+  enableAutosave?: boolean;
+  enableTableOfContents?: boolean;
+  enableOgImageGenerator?: boolean;
   timezone: string;
   custom?: Record<string, unknown>;
 }

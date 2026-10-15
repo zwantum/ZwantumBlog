@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Author, AuthorInput, AuthorSEO, AuthorSocialLinks } from '@zwantum/blog-types';
 import { BlogClient } from '@zwantum/blog-core';
+import { toast } from '../components/Toast';
 
 export interface AuthorManagerProps {
   client: BlogClient;
@@ -218,14 +219,16 @@ export const AuthorManager: React.FC<AuthorManagerProps> = ({ client, className 
 
       if (editingAuthor) {
         await client.authors.update(editingAuthor.id, input);
+        toast.success('Author updated successfully.', 'Author Updated');
       } else {
         await client.authors.create(input);
+        toast.success('Author created successfully.', 'Author Created');
       }
 
       setIsModalOpen(false);
       fetchAuthors();
     } catch (err) {
-      alert(`Error saving author: ${err}`);
+      toast.error(`Error saving author: ${err}`, 'Save Error');
     }
   };
 
@@ -234,8 +237,9 @@ export const AuthorManager: React.FC<AuthorManagerProps> = ({ client, className 
     try {
       await client.authors.delete(id);
       fetchAuthors();
+      toast.success('Author deleted successfully.', 'Author Deleted');
     } catch (err) {
-      alert(`Error: ${err}`);
+      toast.error(`Error: ${err}`, 'Delete Error');
     }
   };
 
