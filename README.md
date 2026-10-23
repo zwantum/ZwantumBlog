@@ -48,18 +48,18 @@ A production-ready, modular, embeddable Blog Engine designed to drop cleanly int
 1. Open your **Supabase Dashboard** (or any PostgreSQL interface) &rarr; **SQL Editor** &rarr; **New query**.
 2. Run the master migration script [`database/migrations/apply_all.sql`](database/migrations/apply_all.sql).
 
-This idempotently sets up all 14 scoped tables and buckets:
+This idempotently sets up all 14 scoped tables, unique indexes, and buckets:
 * `blog_authors`, `blog_media`, `blog_categories`, `blog_tags`, `blog_posts`
 * `blog_post_categories`, `blog_post_tags`, `blog_post_revisions`, `blog_post_seo`
 * `blog_redirects`, `blog_comments`, `blog_settings`, `blog_backups`
+* Unique indexes: `blog_media_url_idx ON blog_media(url)` & `blog_media_storage_path_idx ON blog_media(storage_path)`
 * Supabase Storage buckets: `media` (public) and `backups` (private)
 
 ---
 
-## 💻 Step 2: Installation
+## 💻 Step 2: Installation & CSS Setup
 
-Install the unified `@zwantum/blog` package:
-
+### 1. Install the Unified Package
 ```bash
 npm install @zwantum/blog @supabase/supabase-js
 # or
@@ -68,12 +68,23 @@ pnpm add @zwantum/blog @supabase/supabase-js
 yarn add @zwantum/blog @supabase/supabase-js
 ```
 
+### 2. Import Styles
+Import the pre-bundled stylesheet in your root layout (`app/layout.tsx` or `src/main.tsx`):
+
+```tsx
+import '@zwantum/blog/styles.css';
+```
+
+> [!NOTE]
+> **All-In-One Bundled CSS**: `@zwantum/blog/styles.css` includes the admin controls, rich-text editor toolbar, and prose content formatting in a single self-contained bundle. You do **not** need to import separate editor styles, and buttons will never collapse into plain text even with Tailwind CSS preflight/resets active.
+
 > [!TIP]
-> **Single Unified Package**: Import exactly what you need via clean subpaths:
+> **Clean Modular Subpaths**:
 > * `@zwantum/blog/core` — Client, database adapters, and services
 > * `@zwantum/blog/admin` — Full admin dashboard (`<BlogAdmin />`) & rich editor
-> * `@zwantum/blog/react` — Frontend article reader, Table of Contents, comments, hooks
-> * `@zwantum/blog/next` — Next.js App Router helpers, metadata, SSR & schema
+> * `@zwantum/blog/react` — All-in-one `<BlogArticleReader />`, `<BlogContent />`, `<AuthorAvatar />`, hooks
+> * `@zwantum/blog/next` or `@zwantum/blog/next/server` — Server-safe App Router data fetching & SEO
+> * `@zwantum/blog/next/client` — Next.js client-side editor (`<BlogEditorNext />`)
 > * `@zwantum/blog/seo` — Metadata generator, XML sitemaps, RSS 2.0 feeds
 
 ---
@@ -158,11 +169,13 @@ export default function BlogPage() {
 }
 ```
 
-### 4. Article Reader with Table of Contents & Comments
+### 4. Article Reader with Built-In Layout, Share & Comments
+You can render the complete unboxed article in one line using `<BlogArticleReader />`:
+
 ```tsx
 // src/pages/BlogPost.tsx
 import React from 'react';
-import { BlogProvider, useBlogPost, BlogContent, CommentSection } from '@zwantum/blog/react';
+import { BlogProvider, useBlogPost, BlogArticleReader } from '@zwantum/blog/react';
 import { blogClient } from '../lib/blogClient';
 
 function ArticleView({ slug }: { slug: string }) {
@@ -171,22 +184,8 @@ function ArticleView({ slug }: { slug: string }) {
   if (loading) return <div>Loading article...</div>;
   if (!post) return <div>Article not found.</div>;
 
-  return (
-    <article style={{ maxWidth: '820px', margin: '0 auto', padding: '32px 16px' }}>
-      <h1>{post.title}</h1>
-      <p style={{ color: '#64748b' }}>
-        By {post.author?.name || 'Editorial Staff'} • {post.reading_time} min read
-      </p>
-
-      {/* Renders content with automatic Table of Contents, editorial drop cap, and citations */}
-      <div style={{ margin: '28px 0' }}>
-        <BlogContent content={post.content} />
-      </div>
-
-      {/* Reader Discussion (respects Settings -> Enable Comments toggle) */}
-      <CommentSection postId={post.id} />
-    </article>
-  );
+  // Renders complete article with cover image, caption, TOC, drop cap, share pills, author byline, and comments
+  return <BlogArticleReader post={post} />;
 }
 
 export default function BlogPostPage({ slug }: { slug: string }) {
@@ -212,6 +211,7 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Storage is auto-detected from SupabaseDatabaseAdapter!
 export const blogClient = createBlogClient({
   db: new SupabaseDatabaseAdapter(supabase),
 });
@@ -219,7 +219,7 @@ export const blogClient = createBlogClient({
 
 ### 2. Public Blog Index with ISR (`app/blog/page.tsx`)
 ```tsx
-import { getPosts } from '@zwantum/blog/next';
+import { getPosts } from '@zwantum/blog/next/server';
 import { blogClient } from '@/lib/blogClient';
 import Link from 'next/link';
 
@@ -248,8 +248,8 @@ export default async function BlogPage() {
 
 ### 3. Server-Rendered Article with Automated SEO (`app/blog/[slug]/page.tsx`)
 ```tsx
-import { getPost, getBlogMetadata } from '@zwantum/blog/next';
-import { BlogContent, CommentSection, BlogProvider } from '@zwantum/blog/react';
+import { getPost, getBlogMetadata } from '@zwantum/blog/next/server';
+import { BlogArticleReader, BlogProvider } from '@zwantum/blog/react';
 import { blogClient } from '@/lib/blogClient';
 import { notFound } from 'next/navigation';
 
@@ -264,15 +264,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
 
   return (
     <BlogProvider client={blogClient}>
-      <article style={{ maxWidth: '820px', margin: '0 auto', padding: '48px 20px' }}>
-        <h1>{post.title}</h1>
-        <p>By {post.author?.name || 'Staff'} • {post.reading_time} min read</p>
-
-        {/* Content with automatic Table of Contents and Drop Cap */}
-        <BlogContent content={post.content} />
-
-        <CommentSection postId={post.id} />
-      </article>
+      <BlogArticleReader post={post} />
     </BlogProvider>
   );
 }
@@ -374,6 +366,47 @@ export default function AdminBlogPage() {
 
 ---
 
+## 💡 Checklist for New Website Integrations
+
+When dropping ZwantumBlog into any new website or dashboard, use this 5-point checklist for a flawless setup:
+
+### 1. Database Migration & Unique Indexes
+Run [`database/migrations/apply_all.sql`](database/migrations/apply_all.sql) in your database. If you already have an existing `blog_media` table, ensure the unique indexes are present:
+```sql
+CREATE UNIQUE INDEX IF NOT EXISTS blog_media_url_idx ON blog_media(url);
+CREATE UNIQUE INDEX IF NOT EXISTS blog_media_storage_path_idx ON blog_media(storage_path);
+```
+
+### 2. Single Stylesheet Import
+Import the pre-bundled CSS once in your root layout (`app/layout.tsx` or `src/main.tsx`):
+```tsx
+import '@zwantum/blog/styles.css';
+```
+No secondary CSS imports or editor stylesheets are required. Buttons, icons, and prose typography remain intact regardless of Tailwind CSS resets.
+
+### 3. Server vs. Client Boundary in Next.js App Router
+* **Server Components (`app/blog/...`)**: Import data fetchers from `@zwantum/blog/next/server` (or `@zwantum/blog/next`). This guarantees 100% server safety with zero DOM/Tiptap runtime code executing on Node.js.
+* **Client Components (`'use client'`)**: If you render the admin editor `<BlogEditorNext />` directly, import it from `@zwantum/blog/next/client`.
+
+### 4. Storage Auto-Detection
+You do not need to manually instantiate `SupabaseStorageAdapter`:
+```typescript
+export const blogClient = createBlogClient({
+  db: new SupabaseDatabaseAdapter(supabase),
+});
+```
+`createBlogClient` automatically detects the underlying Supabase storage bucket (`media`).
+
+### 5. Instant Article Rendering
+Instead of manually wiring headings, cover images, share pills, tag badges, author cards, and comment forms, use the pre-built all-in-one reader:
+```tsx
+<BlogProvider client={blogClient}>
+  <BlogArticleReader post={post} />
+</BlogProvider>
+```
+
+---
+
 ## 🧪 Local Testing & Playground
 
 ```bash
@@ -391,3 +424,4 @@ pnpm --filter playground dev
 
 ## 📄 License
 MIT © Zwantum
+
