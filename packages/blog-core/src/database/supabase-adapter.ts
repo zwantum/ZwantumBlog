@@ -45,6 +45,10 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     this.client = client;
   }
 
+  getClient(): SupabaseQueryClient {
+    return this.client;
+  }
+
   private async getPrimaryActiveAuthorId(): Promise<string | null> {
     try {
       const { data } = await this.client
@@ -58,6 +62,51 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
       }
     } catch {
       // Non-fatal fallback
+    }
+    return null;
+  }
+
+  private async resolveFeaturedImageId(
+    featuredImageId?: string | null,
+    featuredImage?: any
+  ): Promise<string | null> {
+    if (isValidUUID(featuredImageId)) return featuredImageId;
+    if (featuredImage?.id && isValidUUID(featuredImage.id)) return featuredImage.id;
+    const rawId = featuredImageId as unknown;
+    const imgUrl =
+      featuredImage?.url ||
+      (typeof rawId === 'string' && (rawId.startsWith('http') || rawId.startsWith('/'))
+        ? rawId
+        : null);
+
+    if (imgUrl && typeof imgUrl === 'string' && (imgUrl.startsWith('http') || imgUrl.startsWith('/'))) {
+      try {
+        const { data: existing } = await this.client
+          .from('blog_media')
+          .select('id')
+          .eq('url', imgUrl)
+          .limit(1);
+        if (existing && existing.length > 0) return existing[0].id;
+        const { data: created } = await this.client
+          .from('blog_media')
+          .insert({
+            filename: featuredImage?.filename || 'featured-image.jpg',
+            original_name: featuredImage?.original_name || featuredImage?.filename || 'featured-image.jpg',
+            url: imgUrl,
+            mime_type: featuredImage?.mime_type || 'image/jpeg',
+            file_size: featuredImage?.file_size || 0,
+            alt_text: featuredImage?.alt_text || '',
+            title: featuredImage?.title || '',
+            caption: featuredImage?.caption || '',
+            storage_provider: featuredImage?.storage_provider || 'supabase',
+            storage_path: featuredImage?.storage_path || featuredImage?.filename || 'featured-image.jpg',
+          })
+          .select('id')
+          .single();
+        if (created?.id) return created.id;
+      } catch (err) {
+        console.warn('Auto-registering media failed:', err);
+      }
     }
     return null;
   }
@@ -158,10 +207,11 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
       validAuthorId = await this.getPrimaryActiveAuthorId();
     }
 
-    // 2. Sanitize featured_image_id: valid UUID or null
-    const validFeaturedImageId = isValidUUID(input.featured_image_id)
-      ? input.featured_image_id
-      : null;
+    // 2. Sanitize featured_image_id: valid UUID or resolve from image object / url
+    const validFeaturedImageId = await this.resolveFeaturedImageId(
+      input.featured_image_id,
+      (input as any).featured_image
+    );
 
     // 3. Filter junction UUIDs
     const validCategoryIds = (input.category_ids || []).filter(isValidUUID);
@@ -254,10 +304,11 @@ export class SupabaseDatabaseAdapter implements BlogDatabaseAdapter {
     }
 
     // 3. Sanitize featured_image_id if provided
-    if ('featured_image_id' in updatePayload) {
-      updatePayload.featured_image_id = isValidUUID(updatePayload.featured_image_id)
-        ? updatePayload.featured_image_id
-        : null;
+    if ('featured_image_id' in updatePayload || (input as any).featured_image) {
+      updatePayload.featured_image_id = await this.resolveFeaturedImageId(
+        updatePayload.featured_image_id as string,
+        (input as any).featured_image
+      );
     }
 
     // 4. Metrics calculation

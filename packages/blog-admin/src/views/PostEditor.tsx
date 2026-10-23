@@ -251,29 +251,28 @@ export const PostEditor: React.FC<PostEditorProps> = ({
   };
 
   const featuredImageInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingFeatured, setUploadingFeatured] = useState(false);
 
-  const handleFeaturedFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFeaturedFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setFeaturedMedia({
-          id: 'manual-img-' + Date.now(),
-          filename: file.name,
-          original_name: file.name,
-          url: reader.result,
-          mime_type: file.type,
-          file_size: file.size,
-          alt_text: title || file.name,
-          storage_provider: 'memory',
-          storage_path: reader.result,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploadingFeatured(true);
+    try {
+      const uploaded = await client.media.upload({
+        file,
+        filename: file.name,
+        mimeType: file.type || 'image/jpeg',
+        altText: title || file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+        title: title || file.name,
+      });
+      setFeaturedMedia(uploaded);
+      toast.success(`Featured image "${file.name}" uploaded successfully.`, 'Image Uploaded');
+    } catch (err: any) {
+      toast.error(`Image upload failed: ${err.message || String(err)}`, 'Upload Error');
+    } finally {
+      setUploadingFeatured(false);
+      if (featuredImageInputRef.current) featuredImageInputRef.current.value = '';
+    }
   };
 
   const [currentPostId, setCurrentPostId] = useState<string | undefined>(postId);
@@ -1384,7 +1383,11 @@ export const PostEditor: React.FC<PostEditorProps> = ({
                 style={{ display: 'none' }}
               />
 
-              {featuredMedia ? (
+              {uploadingFeatured ? (
+                <div style={{ textAlign: 'center', padding: '24px 12px', border: '2px dashed #cbd5e1', borderRadius: '8px' }}>
+                  <p style={{ fontSize: '13px', color: '#475569', margin: 0, fontWeight: 500 }}>Uploading image...</p>
+                </div>
+              ) : featuredMedia ? (
                 <div>
                   <img
                     src={featuredMedia.url}

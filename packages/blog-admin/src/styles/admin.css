@@ -1,3 +1,6 @@
+@import '@zwantum/blog-editor/styles.css';
+@import '@zwantum/blog-editor/content.css';
+
 /* ==========================================================================
    ZwantumBlog Modular Admin Styles
    Custom property isolation with --zw-admin-*

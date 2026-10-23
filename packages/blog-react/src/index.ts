@@ -7,4 +7,7 @@ export * from './components/base/Pagination';
 export * from './components/base/CategoryFilter';
 export * from './components/base/ShareButtons';
 export * from './components/base/CommentSection';
+export * from './components/base/AuthorAvatar';
 export * from './components/TableOfContents';
+export * from './components/BlogArticleReader';
+

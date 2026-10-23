@@ -8,7 +8,7 @@ import {
   PaginationParams,
   PaginatedResult,
 } from '@zwantum/blog-types';
-import { BlogStorageAdapter, MemoryStorageAdapter } from '@zwantum/blog-storage';
+import { BlogStorageAdapter, MemoryStorageAdapter, SupabaseStorageAdapter } from '@zwantum/blog-storage';
 import {
   generatePostMetadata,
   generateArticleSchema,
@@ -97,7 +97,15 @@ export function createBlogClient(options?: BlogClientOptions): BlogClient {
   };
 
   const db = options?.db || new MemoryDatabaseAdapter(true);
-  const storage = options?.storage || new MemoryStorageAdapter();
+  let storage = options?.storage;
+  if (!storage) {
+    const rawClient = (db as any)?.getClient ? (db as any).getClient() : ((db as any)?.client || (db as any)?.raw?.client);
+    if (rawClient && rawClient.storage) {
+      storage = new SupabaseStorageAdapter(rawClient);
+    } else {
+      storage = new MemoryStorageAdapter();
+    }
+  }
 
   const posts = new PostService(db, config);
   const categories = new CategoryService(db);

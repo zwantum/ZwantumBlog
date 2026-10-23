@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { BlogEditor, BlogEditorProps } from '@zwantum/blog-editor';
 

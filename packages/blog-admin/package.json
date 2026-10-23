@@ -1,6 +1,6 @@
 {
   "name": "@zwantum/blog-admin",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Modular Blog admin components designed to plug into any existing website dashboard",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

@@ -200,10 +200,18 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
 
         let createdId = filePath;
         try {
-          const { data: row } = await supabaseClient
+          const { data: existingRows } = await supabaseClient
             .from('blog_media')
-            .upsert(
-              {
+            .select('id')
+            .or(`storage_path.eq.${filePath},url.eq.${publicUrl}`)
+            .limit(1);
+
+          if (existingRows && existingRows.length > 0) {
+            createdId = existingRows[0].id;
+          } else {
+            const { data: row } = await supabaseClient
+              .from('blog_media')
+              .insert({
                 filename: filePath,
                 original_name: file.name,
                 url: publicUrl,
@@ -211,15 +219,15 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
                 file_size: file.size,
                 alt_text: file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
                 title: file.name,
+                caption: '',
                 storage_provider: 'supabase',
                 storage_path: filePath,
-              },
-              { onConflict: 'url' }
-            )
-            .select()
-            .single();
+              })
+              .select('id')
+              .single();
 
-          if (row?.id) createdId = row.id;
+            if (row?.id) createdId = row.id;
+          }
         } catch {
           // non-fatal
         }
@@ -333,21 +341,48 @@ export const MediaLibrary: React.FC<MediaLibraryProps> = ({
     if (!selectedItem) return;
     try {
       if (supabaseClient?.from) {
-        await supabaseClient
-          .from('blog_media')
-          .upsert(
-            {
-              id: selectedItem.id.length === 36 ? selectedItem.id : undefined,
-              filename: selectedItem.name,
-              url: selectedItem.url,
-              alt_text: altText,
-              title,
-              caption,
-              storage_provider: 'supabase',
-              storage_path: selectedItem.name,
-            },
-            { onConflict: 'url' }
-          );
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(selectedItem.id);
+        if (isUuid) {
+          const { error } = await supabaseClient
+            .from('blog_media')
+            .update({ alt_text: altText, title, caption })
+            .eq('id', selectedItem.id);
+          if (error) throw error;
+        } else {
+          const { data: existing } = await supabaseClient
+            .from('blog_media')
+            .select('id')
+            .or(`filename.eq.${selectedItem.name},url.eq.${selectedItem.url},storage_path.eq.${selectedItem.name}`)
+            .limit(1);
+          if (existing && existing.length > 0) {
+            const { error } = await supabaseClient
+              .from('blog_media')
+              .update({ alt_text: altText, title, caption })
+              .eq('id', existing[0].id);
+            if (error) throw error;
+          } else {
+            const { data: inserted, error } = await supabaseClient
+              .from('blog_media')
+              .insert({
+                filename: selectedItem.name,
+                original_name: selectedItem.name,
+                url: selectedItem.url,
+                alt_text: altText,
+                title,
+                caption,
+                storage_provider: 'supabase',
+                storage_path: selectedItem.name,
+                mime_type: selectedItem.mime_type || 'image/jpeg',
+                file_size: selectedItem.size || 0,
+              })
+              .select('id')
+              .single();
+            if (error) throw error;
+            if (inserted?.id) {
+              setSelectedItem((prev) => (prev ? { ...prev, id: inserted.id } : null));
+            }
+          }
+        }
       } else {
         await client.media.update(selectedItem.id, { alt_text: altText, title, caption });
       }

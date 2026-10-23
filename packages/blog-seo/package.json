@@ -1,6 +1,6 @@
 {
   "name": "@zwantum/blog-seo",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Comprehensive SEO, Schema, OpenGraph, Sitemap, and Health Check engine for ZwantumBlog",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

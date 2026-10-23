@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS blog_media (
 );
 CREATE INDEX IF NOT EXISTS idx_blog_media_mime_type ON blog_media(mime_type);
 CREATE INDEX IF NOT EXISTS idx_blog_media_created_at ON blog_media(created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS blog_media_url_idx ON blog_media(url);
+CREATE UNIQUE INDEX IF NOT EXISTS blog_media_storage_path_idx ON blog_media(storage_path);
 
 -- 003: Categories
 CREATE TABLE IF NOT EXISTS blog_categories (

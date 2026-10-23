@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@zwantum/blog-editor/styles.css': path.resolve(__dirname, '../../packages/blog-editor/src/styles/editor.css'),
+      '@zwantum/blog-editor/content.css': path.resolve(__dirname, '../../packages/blog-editor/src/styles/content.css'),
       '@zwantum/blog-admin/styles.css': path.resolve(__dirname, '../../packages/blog-admin/src/styles/admin.css'),
       '@zwantum/blog-types': path.resolve(__dirname, '../../packages/blog-types/src'),
       '@zwantum/blog-core': path.resolve(__dirname, '../../packages/blog-core/src'),
